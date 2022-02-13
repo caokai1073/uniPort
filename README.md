@@ -1,2 +1,2 @@
 # uniPort
-a unified single-cell data integration framework by optimal transport
+a unified single-cell data integration framework with optimal transport
