@@ -12,8 +12,8 @@ import scanpy as sc
 from anndata import AnnData
 import scipy
 
-from .net.vae import VAE
-from .net.utils import EarlyStopping
+from .modal.vae import VAE
+from .modal.utils import EarlyStopping
 from .metrics import batch_entropy_mixing_score, silhouette_score
 from .logger import create_logger
 from .data_loader import load_data
