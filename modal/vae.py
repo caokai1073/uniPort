@@ -15,7 +15,6 @@ import time
 from .layer import *
 from .loss import *
 
-
 class VAE(nn.Module):
     """
     VAE framework
@@ -37,7 +36,6 @@ class VAE(nn.Module):
 
         """
         super().__init__()
-
 
         x_dim = {}
 
