@@ -1,38 +1,24 @@
-Usage
-=====
+Tutorials
+=========
 
 .. _installation:
 
-Hallo world！
-------------
-How are you
 
-Installation
-------------
+Pip installation
+----------------
 
-To use Lumache, first install it using pip:
+To use uniPort, first install it using pip:
 
 .. code-block:: console
 
-   (.venv) $ pip install lumache
+   pip3 install uniport
 
-Creating recipes
-----------------
+Post installation check
+-----------------------
+After a correct installation, you should be able to import the module without errors:
 
-To retrieve a list of random ingredients,
-you can use the ``lumache.get_random_ingredients()`` function:
+.. code-block:: console
 
-.. autofunction:: lumache.get_random_ingredients
+   import uniport as up
 
-The ``kind`` parameter should be either ``"meat"``, ``"fish"``,
-or ``"veggies"``. Otherwise, :py:func:`lumache.get_random_ingredients`
-will raise an exception.
-
-.. autoexception:: lumache.InvalidKindError
-
-For example:
-
->>> import lumache
->>> lumache.get_random_ingredients()
-['shells', 'gorgonzola', 'parsley']
 
