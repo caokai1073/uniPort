@@ -6,7 +6,7 @@
 [![pypi-badge](https://img.shields.io/pypi/v/scglue)](https://pypi.org/project/scglue)
 [![docs-badge](https://readthedocs.org/projects/uniport/badge/?version=latest)](https://uniport.readthedocs.io/en/latest/?badge=latest)
 
-![Overview](docs/_static/overview.pdf)
+![Overview](docs/_static/overview.svg)
 
 
 ## Directory structure
