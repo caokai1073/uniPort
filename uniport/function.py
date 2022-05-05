@@ -1,7 +1,6 @@
 #!/usr/bin/env 
 """
 # Author: Kai Cao
-# Modified from SCALEX
 """
 
 import torch
@@ -11,12 +10,146 @@ import os
 import scanpy as sc
 from anndata import AnnData
 import scipy
+import pandas as pd
+from scipy.sparse import issparse
 
 from .modal.vae import VAE
 from .modal.utils import EarlyStopping
-from .metrics import batch_entropy_mixing_score, silhouette_score
+from .metrics import batch_entropy_mixing_score, silhouette
 from .logger import create_logger
 from .data_loader import load_data
+
+from anndata import AnnData
+from sklearn.preprocessing import maxabs_scale, MaxAbsScaler
+
+from glob import glob
+
+np.warnings.filterwarnings('ignore')
+DATA_PATH = os.path.expanduser("~")+'/.uniport/'
+CHUNK_SIZE = 20000
+
+def read_mtx(path):
+    """\
+    Read mtx format data folder including: 
+    
+        * matrix file: e.g. count.mtx or matrix.mtx or their gz format
+        * barcode file: e.g. barcode.txt
+        * feature file: e.g. feature.txt
+        
+    Parameters
+    ----------
+    path
+        the path store the mtx files  
+        
+    Return
+    ------
+    AnnData
+    """
+    for filename in glob(path+'/*'):
+        if ('count' in filename or 'matrix' in filename or 'data' in filename) and ('mtx' in filename):
+            adata = sc.read_mtx(filename).T
+    for filename in glob(path+'/*'):
+        if 'barcode' in filename:
+            barcode = pd.read_csv(filename, sep='\t', header=None).iloc[:, -1].values
+            adata.obs = pd.DataFrame(index=barcode)
+        if 'gene' in filename or 'peaks' in filename:
+            gene = pd.read_csv(filename, sep='\t', header=None).iloc[:, -1].values
+            adata.var = pd.DataFrame(index=gene)
+        elif 'feature' in filename:
+            gene = pd.read_csv(filename, sep='\t', header=None).iloc[:, 1].values
+            adata.var = pd.DataFrame(index=gene)
+             
+    return adata
+
+
+def load_file(path):  
+    """
+    Load single cell dataset from file
+    
+    Parameters
+    ----------
+    path
+        the path store the file
+        
+    Return
+    ------
+    AnnData
+    """
+    if os.path.exists(DATA_PATH+path+'.h5ad'):
+        adata = sc.read_h5ad(DATA_PATH+path+'.h5ad')
+    elif os.path.isdir(path): # mtx format
+        adata = read_mtx(path)
+    elif os.path.isfile(path):
+        if path.endswith(('.csv', '.csv.gz')):
+            adata = sc.read_csv(path).T
+        elif path.endswith(('.txt', '.txt.gz', '.tsv', '.tsv.gz')):
+            df = pd.read_csv(path, sep='\t', index_col=0).T
+            adata = AnnData(df.values, dict(obs_names=df.index.values), dict(var_names=df.columns.values))
+        elif path.endswith('.h5ad'):
+            adata = sc.read_h5ad(path)
+    else:
+        raise ValueError("File {} not exists".format(path))
+        
+    if not issparse(adata.X):
+        adata.X = scipy.sparse.csr_matrix(adata.X)
+
+    return adata
+    
+
+def filter_data(
+        adata: AnnData,
+        min_features: int = 0, 
+        min_cells: int = 0,     
+        log=None
+    ):
+    """
+    Filter cells and genes
+    
+    Parameters
+    ----------
+    adata
+        An AnnData matrice of shape n_obs × n_vars. Rows correspond to cells and columns to genes.
+    min_features
+        Filtered out cells that are detected in less than n genes. Default: 0.
+    min_cells
+        Filtered out genes that are detected in less than n cells. Default: 0.
+        
+    Return
+    ------
+    AnnData
+    """
+    
+
+    if log: log.info('Filtering cells')
+    sc.pp.filter_cells(adata, min_genes=min_features)
+    
+    if log: log.info('Filtering features')
+    sc.pp.filter_genes(adata, min_cells=min_cells)
+
+    return adata
+
+def batch_scale(adata, chunk_size=CHUNK_SIZE):
+    """
+    Batch-specific scale data
+    
+    Parameters
+    ----------
+    adata
+        AnnData
+    chunk_size
+        chunk large data into small chunks
+    
+    Return
+    ------
+    AnnData
+    """
+    for b in adata.obs['source'].unique():
+        idx = np.where(adata.obs['source']==b)[0]
+        scaler = MaxAbsScaler(copy=False).fit(adata.X[idx])
+        for i in range(len(idx)//chunk_size+1):
+            adata.X[idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.X[idx[i*chunk_size:(i+1)*chunk_size]])
+
+    return adata
 
 def Get_label_Prior(alpha, celltype1, celltype2):
 
@@ -52,17 +185,17 @@ def Get_label_Prior(alpha, celltype1, celltype2):
 def label_reweight(celltype):
 
     """
-    Reweight labels if all cell types share the same weight 
+    Reweight labels to let all cell types share the same total weight 
     
     Parameters
     ----------
-    celltype1
+    celltype
         cell labels 
 
     Return
     ------
     Weights
-        a vector of weight 
+        a vector of weights of cells 
     """
 
     n = len(celltype)
@@ -87,26 +220,30 @@ def Run(
         ref_id=None,    
         save_OT=False,
         rep_celltype='cell_type',
-        use_specific = True,
-        lambda_1=0.5,
-        Lambda=0.5,
+        use_specific=True,
+        lambda_s=0.5,
+        labmda_recon=1.0,
+        lambda_kl=0.5,
         gamma=1.0,
         batch_size=256, 
         lr=2e-4, 
-        max_iteration=60000,
+        max_iteration=30000,
+        loss_type='BCE',
         seed=124, 
         gpu=0, 
         outdir='output/', 
         out='latent',
         input_id=0,
         pred_id=1,
-        ignore_umap=False,
+        umap=True,
         verbose=False,
-        assess=False,
+        assess=True,
         show=False,
         source_name='source',
         batch_key='domain_id',
         label_weight=None,
+        enc=None,
+        dec=None,
     ):
 
     """
@@ -117,26 +254,28 @@ def Run(
     adatas
         List of AnnData matrices for each dataset.
     adata_cm
-        AnnData containing common genes.
+        AnnData matrices containing common genes.
     mode
         Choose from ['h', 'v', 'd']
-        If 'h', integrate data with common genes
-        If 'v', integrate data profiled from the same cells
-        If 'd', inetrgate data without common genes
+        If 'h', integrate data with common genes (Horizontal integration)
+        If 'v', integrate data profiled from the same cells (Vertical integration)
+        If 'd', inetrgate data without common genes (Diagonal integration)
         Default: 'h'.
     Prior
         Prior correspondence matrix.
     ref_id
         Id of reference dataset.
     save_OT
-        If True, output a global OT plan. Default: False.
+        If True, output a global OT plan. Need more memory. Default: False.
     rep_celltype
         Names of cell-type annotation in AnnData. Default: 'cell_type'.
     use_specific
         If True, specific genes in each dataset will be considered. Default: True.
-    lambda_1
-        Balanced parameter for specific genes. Default: 0.5.
-    Lambda: 
+    lambda_s
+        Balanced parameter for common and specific genes. Default: 0.5.
+    lambda_recon: 
+        Balanced parameter for reconstruct term. Default: 0.5.
+    lambda_kl: 
         Balanced parameter for KL divergence. Default: 0.5.
     gamma:
         Balanced parameter for OT. Default: 1.0.
@@ -145,7 +284,7 @@ def Run(
     lr
         Learning rate. Default: 2e-4.
     max_iteration
-        Max iterations for training. Training one batch_size samples is one iteration. Default: 60000.
+        Max iterations for training. Training one batch_size samples is one iteration. Default: 30000.
     seed
         Random seed for torch and numpy. Default: 124.
     gpu
@@ -162,8 +301,8 @@ def Run(
         Only used when mode=='d' and out=='predict' to choose a encoder to project data. Default: 0.
     pred_id
         Only used when out=='predict' to choose a decoder to predict data. Default: 1.
-    ignore_umap
-        If True, do not perform UMAP for visualization and leiden for clustering. Default: False.
+    umap
+        If True, perform UMAP for visualization. Default: True.
     verbose
         Verbosity, True or False. Default: False.
     assess
@@ -176,6 +315,10 @@ def Run(
         Name of batch in AnnData. Default: domain_id.
     label_weight
         Prior-guided weighted vectors. Default: None.
+    enc
+        structure of encoder
+    dec
+        structure of decoder
     
     Return
     ------
@@ -205,19 +348,20 @@ def Run(
     os.makedirs(outdir+'/checkpoint', exist_ok=True)
     log = create_logger('', fh=outdir+'log.txt')
 
-    if adatas is None:
+    # split adata_cm to adatas
+    if adatas is None:  
         use_specific = False
         _, idx = np.unique(adata_cm.obs[source_name], return_index=True)
         batches = adata_cm.obs[source_name][np.sort(idx)]
-        print(batches)
         flagged = []
         for batch in batches:
             flagged.append(adata_cm[adata_cm.obs[source_name]==batch].copy())
-
         adatas = flagged
 
     n_domain = len(adatas)
-    if ref_id is None:
+
+    # give reference datasets
+    if ref_id is None:  
         ref_id = n_domain-1
 
     tran = {}
@@ -227,11 +371,11 @@ def Run(
     for i, adata in enumerate(adatas):
         print('dataset {}:'.format(i))
         print(adata)
-
         num_cell.append(adata.X.shape[0])
         num_gene.append(adata.X.shape[1])
         print('reference dataset {}'.format(ref_id))
 
+    # training
     if out == 'latent':
 
         if save_OT:           
@@ -267,24 +411,30 @@ def Run(
         )
 
         early_stopping = EarlyStopping(patience=10, checkpoint_file=outdir+'/checkpoint/model.pt')
-       
-        dec = {}
-        enc = [['fc', 1024, 1, 'relu'],['fc', 16, '', '']]
-        if mode == 'd':     
-            for i in range(n_domain):          
-                dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]
+        
+        # encoder structure
+        if enc is None:
+            enc = [['fc', 1024, 1, 'relu'],['fc', 16, '', '']]      
 
-        elif mode == 'h':      
-            num_gene.append(adata_cm.X.shape[1]) 
-            dec[0] = [['fc', num_gene[n_domain], n_domain, 'sigmoid']]
-            if use_specific:
-                for i in range(1, n_domain+1):
-                    dec[i] = [['fc', num_gene[i-1], 1, 'sigmoid']]
+        # decoder structure
+        if dec is None:
+            dec = {} 
+            if mode == 'd':     
+                for i in range(n_domain):          
+                    dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]
 
-        else:
-            for i in range(n_domain):
-                dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]
+            elif mode == 'h':      
+                num_gene.append(adata_cm.X.shape[1]) 
+                dec[0] = [['fc', num_gene[n_domain], n_domain, 'sigmoid']]  # common decoder
+                if use_specific: 
+                    for i in range(1, n_domain+1):
+                        dec[i] = [['fc', num_gene[i-1], 1, 'sigmoid']]   # dataset-specific decoder
 
+            else:
+                for i in range(n_domain):
+                    dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]    # dataset-specific decoder
+
+        # init model
         model = VAE(enc, dec, ref_id=ref_id, n_domain=n_domain, mode=mode)
 
         log.info('model\n'+model.__repr__())
@@ -294,23 +444,26 @@ def Run(
             tran,
             num_cell,
             num_gene,
+            mode=mode,
             label_weight=label_weight,
-            rep_celltype=rep_celltype,
             Prior=Prior,
             save_OT=save_OT,
             use_specific=use_specific,
-            lambda_1=lambda_1,
-            Lambda=Lambda,
+            lambda_s=lambda_s,
+            labmda_recon=1.0,
+            lambda_kl=lambda_kl,
             gamma=gamma,
             lr=lr, 
             max_iteration=max_iteration, 
             device=device, 
             early_stopping=early_stopping, 
             verbose=verbose,
-            mode=mode,
+            loss_type=loss_type,
         )
         torch.save({'enc':enc, 'dec':dec, 'n_domain':n_domain, 'ref_id':ref_id, 'num_gene':num_gene}, outdir+'/checkpoint/config.pt')     
 
+
+    # project or predict
     else:
         state = torch.load(outdir+'/checkpoint/config.pt')
         enc, dec, n_domain, ref_id, num_gene = state['enc'], state['dec'], state['n_domain'], state['ref_id'], state['num_gene']
@@ -348,7 +501,7 @@ def Run(
             adata_cm.obsm[out] = model.encodeBatch(testloader, num_gene, pred_id=pred_id, device=device, mode=mode, out=out)
 
 
-    if not ignore_umap: #and adata.shape[0]<1e6:
+    if umap: #and adata.shape[0]<1e6:
         log.info('Plot umap')
         sc.settings.figdir = outdir
         sc.set_figure_params(dpi=200, fontsize=10)
@@ -362,7 +515,7 @@ def Run(
             color = [c for c in cols if c in adata_cm.obs]
 
             if len(color) > 0:
-                sc.pl.umap(adata_cm, color=color, save='result2.pdf', title=['',''], legend_fontsize=10, s=2, show=show, \
+                sc.pl.umap(adata_cm, color=color, save='test.pdf', title=['',''], legend_fontsize=10, s=2, show=show, \
                         wspace=0.4)
  
             if assess:
@@ -371,7 +524,7 @@ def Run(
                     log.info('batch_entropy_mixing_score: {:.3f}'.format(entropy_score))
 
                 if rep_celltype in adata_cm.obs:
-                    sil_score = silhouette_score(adata_cm.obsm['X_umap'], adata_cm.obs[rep_celltype].cat.codes)
+                    sil_score = silhouette(adata_cm.obsm['X_umap'], adata_cm.obs[rep_celltype].cat.codes)
                     log.info("silhouette_score: {:.3f}".format(sil_score))
 
         else:
@@ -385,7 +538,7 @@ def Run(
 
             entropy_score = batch_entropy_mixing_score(adata_concat.obsm['X_umap'], adata_concat.obs[source_name])
             log.info('batch_entropy_mixing_score: {:.3f}'.format(entropy_score))
-            sil_score = silhouette_score(adata_concat.obsm['X_umap'], adata_concat.obs[rep_celltype].cat.codes)
+            sil_score = silhouette(adata_concat.obsm['X_umap'], adata_concat.obs[rep_celltype].cat.codes)
             log.info("silhouette_score: {:.3f}".format(sil_score))
             
 
@@ -398,37 +551,4 @@ def Run(
         if save_OT:
             return adata_concat, tran
         return adata_concat 
-    
-
-def label_transfer(ref, query, rep='latent', label='celltype'):
-    """
-    From SCALEX
-    Label transfer
-    
-    Parameters
-    -----------
-    ref
-        reference containing the projected representations and labels
-    query
-        query data to transfer label
-    rep
-        representations to train the classifier. Default is `latent`
-    label
-        label name. Defautl is `celltype` stored in ref.obs
-    
-    Returns
-    --------
-    transfered label
-    """
-
-    from sklearn.neighbors import KNeighborsClassifier
-    
-    X_train = ref.obsm[rep]
-    y_train = ref.obs[label]
-    X_test = query.obsm[rep]
-    
-    knn = knn = KNeighborsClassifier().fit(X_train, y_train)
-    y_test = knn.predict(X_test)
-    
-    return y_test
 

@@ -15,6 +15,7 @@ import time
 from .layer import *
 from .loss import *
 
+
 class VAE(nn.Module):
     """
     VAE framework
@@ -36,6 +37,7 @@ class VAE(nn.Module):
 
         """
         super().__init__()
+
 
         x_dim = {}
 
@@ -185,19 +187,19 @@ class VAE(nn.Module):
             num_gene,
             mode='h',
             label_weight=None,
-            rep_celltype='cell_type',
             Prior=None,
             save_OT=False,
             use_specific=False,
-            lambda_1=0.5,
-            Lambda=0.5,
+            lambda_s=0.5,
+            lambda_kl=0.5,
+            labmda_recon=1.0,
             gamma=1.0,
             lr=2e-4,
             max_iteration=30000,
             early_stopping=None,
             device='cuda:0',  
             verbose=False,
-            
+            loss_type='BCE'
         ):
         """
         train VAE
@@ -220,15 +222,13 @@ class VAE(nn.Module):
             Default: 'h'.
         label_weight
             Prior-guided weighted vectors. Default: None.
-        rep_celltype
-            Names of cell-type annotation in AnnData. Default: 'cell_type'.
         Prior
             Prior correspondence matrix.
         save_OT
             If True, output a global OT plan. Default: False.
         use_specific
             If True, specific genes in each dataset will be considered. Default: True.
-        lambda_1
+        lambda_s
             Balanced parameter for specific genes. Default: 0.5.
         Lambda: 
             Balanced parameter for KL divergence. Default: 0.5.
@@ -255,8 +255,14 @@ class VAE(nn.Module):
 
         optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=5e-4)
 
-        # n_epoch = max_iteration
         n_epoch = int(np.ceil(max_iteration/len(dataloader)))
+
+        if loss_type == 'BCE':
+            loss_func = nn.BCELoss()
+        elif loss_type == 'MSE':
+            loss_func = nn.MSELoss()
+        elif loss_type == 'L1':
+            loss_func = nn.L1Loss()
         
         with tqdm(range(n_epoch), total=n_epoch, desc='Epochs') as tq:       
             for epoch in tq:
@@ -284,14 +290,14 @@ class VAE(nn.Module):
                         z, mu, var = self.encoder(x_list[0], 0)
                         kl_loss += kl_div(mu, var) 
                         recon = self.decoder(z, 0)
-                        recon_loss = F.binary_cross_entropy(recon, x_list[0]) * max(2000, x_list[0].size(-1))
+                        recon_loss = loss_func(recon, x_list[0]) * 2000 * labmda_recon
 
                         for j in range(1, self.n_domain):
 
                             recon = self.decoder(z, j)
-                            recon_loss += lambda_1 * F.binary_cross_entropy(recon, x_list[j]) * max(2000, x_list[j].size(-1))   ## TO DO
+                            recon_loss += lambda_s * loss_func(recon, x_list[j]) * 2000 * labmda_recon   ## TO DO
                     
-                        loss = {'recon_loss':recon_loss, 'kl_loss':Lambda*kl_loss} 
+                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss} 
 
                         optim.zero_grad()
                         sum(loss.values()).backward()
@@ -359,7 +365,7 @@ class VAE(nn.Module):
                             var_dict[j] = var_j
                             recon_j = self.decoder(z_j, j)
 
-                            recon_loss += F.binary_cross_entropy(recon_j, x[loc[j]][:, 0:num_gene[j]]) * x[loc[j]].size(-1)  ## TO DO
+                            recon_loss += loss_func(recon_j, x[loc[j]][:, 0:num_gene[j]]) * x[loc[j]].size(-1)  ## TO DO
                             kl_loss += kl_div(mu_j, var_j) 
 
                         for j in query_id:
@@ -374,7 +380,7 @@ class VAE(nn.Module):
 
                             ot_loss += ot_loss_tmp
 
-                        loss = {'recon_loss':recon_loss, 'kl_loss':Lambda*kl_loss, 'ot_loss':gamma*ot_loss} 
+                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':gamma*ot_loss} 
 
                         optim.zero_grad()
                         sum(loss.values()).backward()
@@ -394,7 +400,6 @@ class VAE(nn.Module):
                 elif mode == 'h':
 
                     for i, (x, y, idx) in tk0:
-                        # print(y)
 
                         x_c, y = x[:, 0:num_gene[self.n_domain]].float().to(device), y.long().to(device)  
                                                     
@@ -437,27 +442,11 @@ class VAE(nn.Module):
                         idx[self.ref_id] = idx_ref
 
                         z, mu, var = self.encoder(x_c, 0)
-                            
                         recon_x_c = self.decoder(z, 0, y)        
    
-                        if label_weight is None:
-                            recon_loss = F.binary_cross_entropy(recon_x_c, x_c) * max(2000, x_c.size(-1)) 
-
-                        else:
-                            for j, weight in enumerate(label_weight):
-
-                                if len(loc[j])>0:
-                                    if weight is None:
-                                        recon_loss += 1/self.n_domain * F.binary_cross_entropy(recon_x_c[loc[j]], x_c[loc[j]]) * \
-                                        max(2000, x_c.size(-1)) 
-                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]])                               
-                                    else:
-                                        weight = weight.to(device)
-                                        recon_loss += 1/self.n_domain * F.binary_cross_entropy(recon_x_c[loc[j]], x_c[loc[j]], weight=weight[idx[j]]) * \
-                                        max(2000, x_c.size(-1)) 
-                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]], weight[idx[j]])
-
+                        recon_loss = loss_func(recon_x_c, x_c) * 2000 * labmda_recon
                         kl_loss = kl_div(mu, var) 
+                        
                         if use_specific:
 
                             x_s = x[:, num_gene[self.n_domain]:].float().to(device)
@@ -465,8 +454,8 @@ class VAE(nn.Module):
                             for j in range(self.n_domain):
                                 if len(loc[j])>0:
                                     recon_x_s = self.decoder(z[loc[j]], j+1)
-                                    recon_loss += lambda_1 * F.binary_cross_entropy(recon_x_s, x_s[loc[j]][:, 0:num_gene[j]]) * max(2000, num_gene[j])
-
+                                    recon_loss += lambda_s * loss_func(recon_x_s, x_s[loc[j]][:, 0:num_gene[j]]) * 2000 * labmda_recon
+                        
                         if len(torch.unique(y))>1 and len(loc[self.ref_id])!=0:
                             
                             mu_dict = {}
@@ -517,7 +506,7 @@ class VAE(nn.Module):
 
                                     ot_loss += ot_loss_tmp
    
-                        loss = {'recon_loss':recon_loss, 'kl_loss':Lambda*kl_loss, 'ot_loss':gamma*ot_loss} 
+                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':gamma*ot_loss} 
                         
                         optim.zero_grad()
                         sum(loss.values()).backward()

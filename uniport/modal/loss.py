@@ -45,12 +45,8 @@ def distance_gmm(mu_src: torch.Tensor, mu_dst: torch.Tensor, var_src: torch.Tens
     std_dst = var_dst.sqrt()
     distance_mean = distance_matrix(mu_src, mu_dst, p=2)
     distance_var = distance_matrix(std_src, std_dst, p=2)
-    
 
     # distance_var = torch.sum(sum_matrix(std_src, std_dst) - 2 * (prod_matrix(std_src, std_dst) ** 0.5), 2)
-
-    # print('mean',distance_mean)
-    # print('var',distance_var)
     
     return distance_mean + distance_var + 1e-6
 
@@ -100,14 +96,14 @@ def unbalanced_ot(tran, mu1, var1, mu2, var2, reg=0.1, reg_m=1.0, Couple=None, d
     if torch.isnan(tran).sum() > 0:
         tran = (torch.ones(ns, nt) / (ns * nt)).to(device)
 
-    pho = tran.mean()
-    h_func = 1 - 0.5 * ( 1 + torch.sign(pho - tran) )
-    hat_tran = tran * h_func
-    d_fgw1 = (cost_pp * hat_tran.detach().data).sum()
-    d_fgw2 = ((tran.detach().data - hat_tran.detach().data) * torch.log(1 + torch.exp(-cost_pp))).sum()
-    d_fgw = d_fgw1 + d_fgw2
+    # pho = tran.mean()
+    # h_func = 1 - 0.5 * ( 1 + torch.sign(pho - tran) )
+    # hat_tran = tran * h_func
+    # d_fgw1 = (cost_pp * hat_tran.detach().data).sum()
+    # d_fgw2 = ((tran.detach().data - hat_tran.detach().data) * torch.log(1 + torch.exp(-cost_pp))).sum()
+    # d_fgw = d_fgw1 + d_fgw2
 
-    # d_fgw = (cost_pp * tran.detach().data).sum()
+    d_fgw = (cost_pp * tran.detach().data).sum()
 
     return d_fgw, tran.detach()
 

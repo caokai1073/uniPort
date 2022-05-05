@@ -7,6 +7,7 @@
 import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors, KNeighborsRegressor
+from sklearn.metrics import silhouette_samples, silhouette_score
 
 
 def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_samples_per_pool=100):
@@ -73,4 +74,63 @@ def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_sa
     return Score / float(np.log2(N_batches))
 
 
-from sklearn.metrics import silhouette_score
+def silhouette(
+        X,
+        cell_type,
+        metric='euclidean',
+        scale=True
+):
+    """
+    Wrapper for sklearn silhouette function values range from [-1, 1] with
+        1 being an ideal fit
+        0 indicating overlapping clusters and
+        -1 indicating misclassified cells
+    By default, the score is scaled between 0 and 1. This is controlled `scale=True`
+
+    :param group_key: key in adata.obs of cell labels
+    :param embed: embedding key in adata.obsm, default: 'X_pca'
+    :param scale: default True, scale between 0 (worst) and 1 (best)
+    """
+    # if embed not in adata.obsm.keys():
+        # print(adata.obsm.keys())
+        # raise KeyError(f'{embed} not in obsm')
+    asw = silhouette_score(
+        X,
+        cell_type,
+        metric=metric
+    )
+    if scale:
+        asw = (asw + 1) / 2
+    return asw
+
+def label_transfer(ref, query, rep='latent', label='celltype'):
+    """
+    From SCALEX
+    Label transfer
+    
+    Parameters
+    -----------
+    ref
+        reference containing the projected representations and labels
+    query
+        query data to transfer label
+    rep
+        representations to train the classifier. Default is `latent`
+    label
+        label name. Defautl is `celltype` stored in ref.obs
+    
+    Returns
+    --------
+    transfered label
+    """
+
+    from sklearn.neighbors import KNeighborsClassifier
+    
+    X_train = ref.obsm[rep]
+    y_train = ref.obs[label]
+    X_test = query.obsm[rep]
+    
+    knn = knn = KNeighborsClassifier().fit(X_train, y_train)
+    y_test = knn.predict(X_test)
+    
+    return y_test
