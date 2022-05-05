@@ -9,18 +9,6 @@
 ![Overview](docs/_static/net.svg)
 ![Downstream analysis](docs/_static/downstream.svg)
 
-
-## Directory structure
-
-```
-.
-├── uniport                  # Main Python package
-├── data                    # Data files
-├── docs                    # Documentation files
-├── LICENSE
-└── README.md
-```
-
 ## Installation
 
 The `uniport` package can be installed via pip:
