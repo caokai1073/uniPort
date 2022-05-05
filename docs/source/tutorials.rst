@@ -13,8 +13,6 @@ To use uniPort, first install it using pip:
 
    pip3 install uniport
 
-Post installation check
------------------------
 After a correct installation, you should be able to import the module without errors:
 
 .. code-block:: console
