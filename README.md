@@ -3,10 +3,11 @@
 
 
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/uniport.svg)](https://badge.fury.io/py/POT)
 [![docs-badge](https://readthedocs.org/projects/uniport/badge/?version=latest)](https://uniport.readthedocs.io/en/latest/?badge=latest)
 
-![Overview](docs/_static/net.png)
-![Downstream analysis](docs/_static/downstream.png)
+![Overview](docs/_static/net.svg)
+![Downstream analysis](docs/_static/downstream.svg)
 
 
 ## Directory structure
