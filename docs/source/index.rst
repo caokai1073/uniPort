@@ -11,7 +11,6 @@ Contents
    self
    tutorials
    api
-   release
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_
