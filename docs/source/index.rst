@@ -9,7 +9,7 @@ Contents
    :maxdepth: 1
 
    self
-   tutorials
+   tutorials/index
    api
 
 .. include:: ../../README.md
