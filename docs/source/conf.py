@@ -18,6 +18,10 @@ extensions = [
     'sphinx.ext.intersphinx',
     'recommonmark',
     'sphinx_markdown_tables',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
+    'nbsphinx'
 ]
 
 intersphinx_mapping = {
