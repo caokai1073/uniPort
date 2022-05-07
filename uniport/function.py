@@ -224,7 +224,9 @@ def Run(
         lambda_s=0.5,
         labmda_recon=1.0,
         lambda_kl=0.5,
-        gamma=1.0,
+        lambda_ot=1.0,
+        reg=0.1,
+        reg_m=1.0,
         batch_size=256, 
         lr=2e-4, 
         max_iteration=30000,
@@ -237,7 +239,7 @@ def Run(
         pred_id=1,
         umap=True,
         verbose=False,
-        assess=True,
+        assess=False,
         show=False,
         source_name='source',
         batch_key='domain_id',
@@ -262,59 +264,63 @@ def Run(
         If 'd', inetrgate data without common genes (Diagonal integration)
         Default: 'h'.
     Prior
-        Prior correspondence matrix.
+        Prior correspondence matrix. Default: None
     ref_id
-        Id of reference dataset.
+        Id of reference dataset. Default: None
     save_OT
-        If True, output a global OT plan. Need more memory. Default: False.
+        If True, output a global OT plan. Need more memory. Default: False
     rep_celltype
-        Names of cell-type annotation in AnnData. Default: 'cell_type'.
+        Names of cell-type annotation in AnnData. Default: 'cell_type'
     use_specific
-        If True, specific genes in each dataset will be considered. Default: True.
+        If True, specific genes in each dataset will be considered. Default: True
     lambda_s
-        Balanced parameter for common and specific genes. Default: 0.5.
+        Balanced parameter for common and specific genes. Default: 0.5
     lambda_recon: 
-        Balanced parameter for reconstruct term. Default: 0.5.
+        Balanced parameter for reconstruct term. Default: 0.5
     lambda_kl: 
-        Balanced parameter for KL divergence. Default: 0.5.
-    gamma:
-        Balanced parameter for OT. Default: 1.0.
+        Balanced parameter for KL divergence. Default: 0.5
+    lambda_ot:
+        Balanced parameter for OT. Default: 1.0
+    reg:
+        Entropy regularization parameter in OT. Default: 0.1
+    reg_m:
+        Unbalanced OT parameter. Larger values means more balanced OT. Default: 1.0
     batch_size
-        Number of samples per batch to load. Default: 256.
+        Number of samples per batch to load. Default: 256
     lr
-        Learning rate. Default: 2e-4.
+        Learning rate. Default: 2e-4
     max_iteration
-        Max iterations for training. Training one batch_size samples is one iteration. Default: 30000.
+        Max iterations for training. Training one batch_size samples is one iteration. Default: 30000
     seed
-        Random seed for torch and numpy. Default: 124.
+        Random seed for torch and numpy. Default: 124
     gpu
-        Index of GPU to use if GPU is available. Default: 0.
+        Index of GPU to use if GPU is available. Default: 0
     outdir
-        Output directory. Default: 'output/'.
+        Output directory. Default: 'output/'
     out
-        Output of uniPort. Choose from ['latent', 'project', 'predict']. 
-        If out=='latent', train the network and output cell embeddings. 
+        Output of uniPort. Choose from ['latent', 'project', 'predict'].
+        If out=='latent', train the network and output cell embeddings.
         If out=='project', project data into the latent space and output cell embeddings. 
         If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. 
         Default: 'latent'.
     input_id
-        Only used when mode=='d' and out=='predict' to choose a encoder to project data. Default: 0.
+        Only used when mode=='d' and out=='predict' to choose a encoder to project data. Default: 0
     pred_id
-        Only used when out=='predict' to choose a decoder to predict data. Default: 1.
+        Only used when out=='predict' to choose a decoder to predict data. Default: 1
     umap
-        If True, perform UMAP for visualization. Default: True.
+        If True, perform UMAP for visualization. Default: True
     verbose
-        Verbosity, True or False. Default: False.
+        Verbosity, True or False. Default: False
     assess
-        If True, calculate the entropy_batch_mixing score and silhouette score to evaluate integration results. Default: False.
+        If True, calculate the entropy_batch_mixing score and silhouette score to evaluate integration results. Default: False
     show
-        If True, show the UMAP visualization of latent space. Default: False.
+        If True, show the UMAP visualization of latent space. Default: False
     source_name
-        Name of source in AnnData. Default: source.
+        Name of source in AnnData. Default: source
     batch_key
-        Name of batch in AnnData. Default: domain_id.
+        Name of batch in AnnData. Default: domain_id
     label_weight
-        Prior-guided weighted vectors. Default: None.
+        Prior-guided weighted vectors. Default: None
     enc
         structure of encoder
     dec
@@ -450,9 +456,11 @@ def Run(
             save_OT=save_OT,
             use_specific=use_specific,
             lambda_s=lambda_s,
-            labmda_recon=1.0,
+            labmda_recon=labmda_recon,
             lambda_kl=lambda_kl,
-            gamma=gamma,
+            lambda_ot=lambda_ot,
+            reg=reg,
+            reg_m=reg_m,
             lr=lr, 
             max_iteration=max_iteration, 
             device=device, 

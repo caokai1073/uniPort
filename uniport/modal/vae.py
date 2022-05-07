@@ -193,7 +193,9 @@ class VAE(nn.Module):
             lambda_s=0.5,
             lambda_kl=0.5,
             labmda_recon=1.0,
-            gamma=1.0,
+            lambda_ot=1.0,
+            reg=0.1,
+            reg_m=1.0,
             lr=2e-4,
             max_iteration=30000,
             early_stopping=None,
@@ -232,7 +234,7 @@ class VAE(nn.Module):
             Balanced parameter for specific genes. Default: 0.5.
         Lambda: 
             Balanced parameter for KL divergence. Default: 0.5.
-        gamma:
+        lambda_ot:
             Balanced parameter for OT. Default: 1.0.
         lr
             Learning rate. Default: 2e-4.
@@ -295,9 +297,9 @@ class VAE(nn.Module):
                         for j in range(1, self.n_domain):
 
                             recon = self.decoder(z, j)
-                            recon_loss += lambda_s * loss_func(recon, x_list[j]) * 2000 * labmda_recon   ## TO DO
+                            recon_loss += lambda_s * loss_func(recon, x_list[j]) * 2000   ## TO DO
                     
-                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss} 
+                        loss = {'recon_loss':labmda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss} 
 
                         optim.zero_grad()
                         sum(loss.values()).backward()
@@ -380,7 +382,7 @@ class VAE(nn.Module):
 
                             ot_loss += ot_loss_tmp
 
-                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':gamma*ot_loss} 
+                        loss = {'recon_loss':labmda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':lambda_ot*ot_loss} 
 
                         optim.zero_grad()
                         sum(loss.values()).backward()
@@ -444,9 +446,23 @@ class VAE(nn.Module):
                         z, mu, var = self.encoder(x_c, 0)
                         recon_x_c = self.decoder(z, 0, y)        
    
-                        recon_loss = loss_func(recon_x_c, x_c) * 2000 * labmda_recon
+                        if label_weight is None:
+                            recon_loss = loss_func(recon_x_c, x_c) * 2000 * labmda_recon
+                        else:
+                            for j, weight in enumerate(label_weight):
+
+                                if len(loc[j])>0:
+                                    if weight is None:
+                                        recon_loss += 1/self.n_domain * loss_func(recon_x_c[loc[j]], x_c[loc[j]]) * \
+                                        2000 * labmda_recon
+                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]])                               
+                                    else:
+                                        weight = weight.to(device)
+                                        recon_loss += 1/self.n_domain * F.binary_cross_entropy(recon_x_c[loc[j]], x_c[loc[j]], weight=weight[idx[j]]) * \
+                                        2000 * labmda_recon
+                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]], weight[idx[j]])
+
                         kl_loss = kl_div(mu, var) 
-                        
                         if use_specific:
 
                             x_s = x[:, num_gene[self.n_domain]:].float().to(device)
@@ -454,7 +470,7 @@ class VAE(nn.Module):
                             for j in range(self.n_domain):
                                 if len(loc[j])>0:
                                     recon_x_s = self.decoder(z[loc[j]], j+1)
-                                    recon_loss += lambda_s * loss_func(recon_x_s, x_s[loc[j]][:, 0:num_gene[j]]) * 2000 * labmda_recon
+                                    recon_loss += lambda_s * loss_func(recon_x_s, x_s[loc[j]][:, 0:num_gene[j]]) * 2000
                         
                         if len(torch.unique(y))>1 and len(loc[self.ref_id])!=0:
                             
@@ -477,6 +493,8 @@ class VAE(nn.Module):
                                             var_dict[j], 
                                             mu_dict[self.ref_id].detach(), 
                                             var_dict[self.ref_id].detach(), 
+                                            reg=reg,
+                                            reg_m=reg_m,
                                             idx_q=idx_query[j],
                                             idx_r=idx_ref,
                                             Couple=Prior_batch, 
@@ -491,6 +509,8 @@ class VAE(nn.Module):
                                             var_dict[j], 
                                             mu_dict[self.ref_id].detach(), 
                                             var_dict[self.ref_id].detach(), 
+                                            reg=reg,
+                                            reg_m=reg_m,
                                             idx_q=idx_query[j],
                                             idx_r=idx_ref,
                                             Couple=Prior_batch, 
@@ -506,7 +526,7 @@ class VAE(nn.Module):
 
                                     ot_loss += ot_loss_tmp
    
-                        loss = {'recon_loss':recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':gamma*ot_loss} 
+                        loss = {'recloss':labmda_recon*recon_loss, 'klloss':lambda_kl*kl_loss, 'otloss':lambda_ot*ot_loss} 
                         
                         optim.zero_grad()
                         sum(loss.values()).backward()
@@ -515,13 +535,13 @@ class VAE(nn.Module):
                         for k,v in loss.items():
                             epoch_loss[k] += loss[k].item()
 
-                        info = ','.join(['{}={:.3f}'.format(k, v) for k,v in loss.items()])
+                        info = ','.join(['{}={:.2f}'.format(k, v) for k,v in loss.items()])
                         tk0.set_postfix_str(info)
 
                     
                     epoch_loss = {k:v/(i+1) for k, v in epoch_loss.items()}
 
-                    epoch_info = ','.join(['{}={:.3f}'.format(k, v) for k,v in epoch_loss.items()])
+                    epoch_info = ','.join(['{}={:.2f}'.format(k, v) for k,v in epoch_loss.items()])
                     tq.set_postfix_str(epoch_info) 
                         
                     early_stopping(sum(epoch_loss.values()), self)
