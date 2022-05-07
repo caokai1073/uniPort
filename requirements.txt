@@ -23,5 +23,7 @@ seaborn>=0.9.0
 leidenalg>=0.8.3
 episcanpy>=0.3.0
 sphinx_autodoc_typehints
-nbsphinx           
+nbsphinx
+sphinx-copybutton           
 sphinx-markdown-tables>=0.0.15 
+
