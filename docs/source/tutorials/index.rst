@@ -8,3 +8,4 @@ Tutorials
    :maxdepth:2
 
    pbmc_preprocess
+   pbmc_integration
