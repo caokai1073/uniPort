@@ -9,8 +9,8 @@ import sphinx_autodoc_typehints
 project = 'uniPort'
 author = 'Kai Cao'
 
-release = '1.0'
-version = '1.0.0'
+release = '1.0.2'
+version = '1.0.2'
 
 # -- General configuration
 
