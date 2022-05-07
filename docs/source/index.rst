@@ -9,6 +9,7 @@ Contents
    :maxdepth: 1
 
    self
+   install
    tutorials/index
    api
 
