@@ -2,6 +2,10 @@
 
 # -- Project information
 
+import inspect
+
+import sphinx_autodoc_typehints
+
 project = 'uniPort'
 author = 'Kai Cao'
 
