@@ -3,4 +3,4 @@ Examples
 
 .. toctree::
 
-    pbmc_preprocess.ipynb
+    PBMC/pbmc_preprocess.ipynb

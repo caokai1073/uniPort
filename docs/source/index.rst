@@ -1,5 +1,5 @@
-uniPort: Unified Data Integration Port
-======================================
+uniPort: Unified Port
+=====================
 
 
 Contents
