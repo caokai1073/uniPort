@@ -1,2 +1,6 @@
-Model Training
---------------
+Examples
+=========
+
+.. toctree::
+
+    pbmc_preprocess.ipynb
