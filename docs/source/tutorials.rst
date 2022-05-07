@@ -4,6 +4,5 @@ Tutorials
 .. toctree::
 
     install
-    dataprocess
-    modeltrain
-    downstream
+    examples
+    pbmc_preprocess.ipynb
