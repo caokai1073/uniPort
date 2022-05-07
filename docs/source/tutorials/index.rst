@@ -1,7 +1,7 @@
-Tutorlals
+Tutorials
 =====================
 
-`Integrate scATAC and scRNA <../tutorials/pbmc_preprocess.ipynb>`_
+`Integrate scATAC and scRNA <pbmc_preprocess.ipynb>`_
 --------------------
 
 .. toctree::
