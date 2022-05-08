@@ -52,6 +52,3 @@ latex_elements = {
 }
 
 html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
-
-html_static_path = ['_static']
-html_show_sphinx = False
