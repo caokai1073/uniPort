@@ -30,6 +30,7 @@ extensions = [
     'nbsphinx'
 ]
 
+
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
@@ -52,3 +53,9 @@ latex_elements = {
 }
 
 html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
+
+from recommonmark.parser import CommonMarkParser
+source_parsers = {
+    '.md': CommonMarkParser,
+}
+source_suffix = ['.rst', '.md']
