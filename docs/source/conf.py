@@ -27,8 +27,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
-    'nbsphinx',
-    'myst_parser'
+    'nbsphinx'
 ]
 
 intersphinx_mapping = {
