@@ -26,4 +26,3 @@ sphinx_autodoc_typehints
 nbsphinx
 sphinx-copybutton           
 sphinx-markdown-tables>=0.0.15 
-myst_parser
