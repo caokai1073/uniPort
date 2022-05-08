@@ -21,13 +21,13 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
-    'recommonmark',
     'sphinx_markdown_tables',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
-    'nbsphinx'
+    'nbsphinx',
+    'myst_parser',
 ]
 
 

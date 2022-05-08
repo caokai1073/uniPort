@@ -1,5 +1,5 @@
 Integrate scATAC and scRNA
---------------------
+--------------------------
 
 
 .. toctree::
