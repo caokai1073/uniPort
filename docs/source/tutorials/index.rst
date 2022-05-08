@@ -3,6 +3,6 @@ Tutorials
 
 .. toctree::
 
-   PBMC/index
-   MERFISH/index
+   PBMC/pbmc
+   MERFISH/merfish
 

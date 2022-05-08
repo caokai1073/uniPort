@@ -27,7 +27,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
-    'nbsphinx'
+    'nbsphinx',
+    'myst_parser'
 ]
 
 intersphinx_mapping = {
@@ -37,6 +38,8 @@ intersphinx_mapping = {
 intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
+
+source_suffix = ['.rst', '.md']
 
 # -- Options for HTML output
 
