@@ -13,6 +13,9 @@ Contents
    tutorials/index
    api
 
+   .. include:: ../../README.md
+   :parser: myst_parser.sphinx_
+
 Indices and tables
 ==================
 
