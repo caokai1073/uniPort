@@ -3,9 +3,6 @@ Installation
 
 .. _installation:
 
-Installation
-----------------
-
 To use uniPort, first install it using pip:
 
 .. code-block:: console
