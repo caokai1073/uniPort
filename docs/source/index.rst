@@ -1,12 +1,12 @@
-uniPort: Unified Port
-=====================
+Tutorials
+=========
 
 .. toctree::
    :maxdepth: 2
 
    self
    install
-   tutorials/index
+   examples/index
    api
 
 .. include:: ../../README.md
