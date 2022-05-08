@@ -9,8 +9,8 @@ import sphinx_autodoc_typehints
 project = 'uniPort'
 author = 'Kai Cao'
 
-release = '1.0.2'
-version = '1.0.2'
+release = '1.0.4'
+version = '1.0.4'
 
 # -- General configuration
 
@@ -55,16 +55,3 @@ html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the l
 
 html_static_path = ['_static']
 html_show_sphinx = False
-
-fa_orig = sphinx_autodoc_typehints.format_annotation
-def format_annotation(annotation, fully_qualified=True):  # pylint: disable=unused-argument
-    r"""
-    Adapted from https://github.com/agronholm/sphinx-autodoc-typehints/issues/38#issuecomment-448517805
-    """
-    if inspect.isclass(annotation):
-        full_name = f'{annotation.__module__}.{annotation.__qualname__}'
-        override = qualname_overrides.get(full_name)
-        if override is not None:
-            return f':py:class:`~{override}`'
-    return fa_orig(annotation)
-sphinx_autodoc_typehints.format_annotation = format_annotation
