@@ -29,7 +29,7 @@ DATA_PATH = os.path.expanduser("~")+'/.uniport/'
 CHUNK_SIZE = 20000
 
 def read_mtx(path):
-    """
+    """\
     Read mtx format data folder including: 
     
         * matrix file: e.g. count.mtx or matrix.mtx or their gz format
@@ -152,6 +152,7 @@ def batch_scale(adata, chunk_size=CHUNK_SIZE):
     return adata
 
 def Get_label_Prior(alpha, celltype1, celltype2):
+
     """
     Create a prior correspondence matrix according to cell labels
     
@@ -182,6 +183,7 @@ def Get_label_Prior(alpha, celltype1, celltype2):
     return Couple
 
 def label_reweight(celltype):
+
     """
     Reweight labels to let all cell types share the same total weight 
     
@@ -214,43 +216,43 @@ def Run(
         adatas=None,     
         adata_cm = None,   
         mode='h',
-        Prior = None,
-        ref_id=None,    
-        save_OT=False,
-        rep_celltype='cell_type',
         lambda_s=0.5,
         labmda_recon=1.0,
         lambda_kl=0.5,
         lambda_ot=1.0,
+        max_iteration=30000,
+        ref_id=None,    
+        save_OT=False,
+        out='latent',
+        label_weight=None,
         reg=0.1,
         reg_m=1.0,
         batch_size=256, 
         lr=2e-4, 
-        max_iteration=30000,
-        loss_type='BCE',
-        seed=124, 
+        enc=None,
         gpu=0, 
+        Prior = None,
+        loss_type='BCE',
         outdir='output/', 
-        out='latent',
         input_id=0,
         pred_id=1,
+        seed=124, 
+        batch_key='domain_id',
+        source_name='source',
+        rep_celltype='cell_type',
         umap=False,
         verbose=False,
         assess=False,
         show=False,
-        source_name='source',
-        batch_key='domain_id',
-        label_weight=None,
-        enc=None,
-        dec=None,
     ):
-    """
-    Integration function
+
+    r"""
+    Run data integration
     
     Parameters
     ----------
     adatas
-        List of AnnData matrices for each dataset.
+        List of AnnData matrices, e.g. [adata1, adata2].
     adata_cm
         AnnData matrices containing common genes.
     mode
@@ -259,14 +261,6 @@ def Run(
         If 'v', integrate data profiled from the same cells (Vertical integration)
         If 'd', inetrgate data without common genes (Diagonal integration)
         Default: 'h'.
-    Prior
-        Prior correspondence matrix. Default: None
-    ref_id
-        Id of reference dataset. Default: None
-    save_OT
-        If True, output a global OT plan. Need more memory. Default: False
-    rep_celltype
-        Names of cell-type annotation in AnnData. Default: 'cell_type'
     lambda_s
         Balanced parameter for common and specific genes. Default: 0.5
     lambda_recon: 
@@ -275,6 +269,20 @@ def Run(
         Balanced parameter for KL divergence. Default: 0.5
     lambda_ot:
         Balanced parameter for OT. Default: 1.0
+    max_iteration
+        Max iterations for training. Training one batch_size samples is one iteration. Default: 30000
+    ref_id
+        Id of reference dataset. Default: None
+    save_OT
+        If True, output a global OT plan. Need more memory. Default: False
+    out
+        Output of uniPort. Choose from ['latent', 'project', 'predict'].
+        If out=='latent', train the network and output cell embeddings.
+        If out=='project', project data into the latent space and output cell embeddings. 
+        If out=='predict', project data into the latent space and output cell embeddings through a specified decoder.
+        Default: 'latent'. 
+    label_weight
+        Prior-guided weighted vectors. Default: None
     reg:
         Entropy regularization parameter in OT. Default: 0.1
     reg_m:
@@ -283,26 +291,28 @@ def Run(
         Number of samples per batch to load. Default: 256
     lr
         Learning rate. Default: 2e-4
-    max_iteration
-        Max iterations for training. Training one batch_size samples is one iteration. Default: 30000
-    loss_type
-        type of loss. 'BCE', 'MSE' or 'L1'. Default: 'BCE'
-    seed
-        Random seed for torch and numpy. Default: 124
+    enc
+        structure of encoder
     gpu
         Index of GPU to use if GPU is available. Default: 0
+    Prior
+        Prior correspondence matrix. Default: None
+    loss_type
+        type of loss. 'BCE', 'MSE' or 'L1'. Default: 'BCE'
     outdir
         Output directory. Default: 'output/'
-    out
-        Output of uniPort. Choose from ['latent', 'project', 'predict'].
-        If out=='latent', train the network and output cell embeddings.
-        If out=='project', project data into the latent space and output cell embeddings. 
-        If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. 
-        Default: 'latent'.
     input_id
         Only used when mode=='d' and out=='predict' to choose a encoder to project data. Default: 0
     pred_id
         Only used when out=='predict' to choose a decoder to predict data. Default: 1
+    seed
+        Random seed for torch and numpy. Default: 124
+    batch_key
+        Name of batch in AnnData. Default: domain_id
+    source_name
+        Name of source in AnnData. Default: source
+    rep_celltype
+        Names of cell-type annotation in AnnData. Default: 'cell_type'   
     umap
         If True, perform UMAP for visualization. Default: False
     verbose
@@ -311,22 +321,17 @@ def Run(
         If True, calculate the entropy_batch_mixing score and silhouette score to evaluate integration results. Default: False
     show
         If True, show the UMAP visualization of latent space. Default: False
-    source_name
-        Name of source in AnnData. Default: source
-    batch_key
-        Name of batch in AnnData. Default: domain_id
-    label_weight
-        Prior-guided weighted vectors. Default: None
-    enc
-        structure of encoder
-    dec
-        structure of decoder
 
     Returns
     -------
-    The output folder contains:
     adata.h5ad
-        The AnnData matrice after integration. The low-dimensional representation of the data is stored at adata.obsm['latent'].
+        The AnnData matrice after integration. The representation of the data is stored at adata.obsm['latent'], adata.obsm['project'] or adata.obsm['predict'].
+    checkpoint
+        model.pt contains the variables of the model and config.pt contains the parameters of the model.
+    log.txt
+        Records raw data information, model parameters etc.
+    umap.pdf 
+        UMAP plot for visualization if umap=True.
     """
 
     if mode == 'h' and adata_cm is None:
@@ -373,22 +378,24 @@ def Run(
     num_cell = []
     num_gene = []
 
-    for i, adata in enumerate(adatas):
-        print('Dataset {}:'.format(i), adata.obs[source_name][0])
-        print(adata)
+    for adata in adatas:
         num_cell.append(adata.X.shape[0])
         num_gene.append(adata.X.shape[1])
 
-    print('Reference dataset is dataset {}'.format(ref_id))
-    print('\n')
-
-    if adata_cm is not None:
-        print('Data with common HVG')
-        print(adata_cm)
-        print('\n')
-
     # training
     if out == 'latent':
+
+        for i, adata in enumerate(adatas):
+            print('Dataset {}:'.format(i), adata.obs[source_name][0])
+            print(adata)
+
+        print('Reference dataset is dataset {}'.format(ref_id))
+        print('\n')
+
+        if adata_cm is not None:
+            print('Data with common HVG')
+            print(adata_cm)
+            print('\n')
 
         if save_OT:           
             memory = 0
@@ -426,22 +433,21 @@ def Run(
             enc = [['fc', 1024, 1, 'relu'],['fc', 16, '', '']]      
 
         # decoder structure
-        if dec is None:
-            dec = {} 
-            if mode == 'd':     
-                for i in range(n_domain):          
-                    dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]
+        dec = {} 
+        if mode == 'd':     
+            for i in range(n_domain):          
+                dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]
 
-            elif mode == 'h':      
-                num_gene.append(adata_cm.X.shape[1]) 
-                dec[0] = [['fc', num_gene[n_domain], n_domain, 'sigmoid']]  # common decoder
-                if use_specific: 
-                    for i in range(1, n_domain+1):
-                        dec[i] = [['fc', num_gene[i-1], 1, 'sigmoid']]   # dataset-specific decoder
+        elif mode == 'h':      
+            num_gene.append(adata_cm.X.shape[1]) 
+            dec[0] = [['fc', num_gene[n_domain], n_domain, 'sigmoid']]  # common decoder
+            if use_specific: 
+                for i in range(1, n_domain+1):
+                    dec[i] = [['fc', num_gene[i-1], 1, 'sigmoid']]   # dataset-specific decoder
 
-            else:
-                for i in range(n_domain):
-                    dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]    # dataset-specific decoder
+        else:
+            for i in range(n_domain):
+                dec[i] = [['fc', num_gene[i], 1, 'sigmoid']]    # dataset-specific decoder
 
         # init model
         model = VAE(enc, dec, ref_id=ref_id, n_domain=n_domain, mode=mode)
