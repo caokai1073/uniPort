@@ -126,7 +126,6 @@ class BatchSampler_balance(Sampler):
 
     
 class SingleCellDataset(Dataset):
-
     def __init__(self, data, batch):
         
         self.data = data
