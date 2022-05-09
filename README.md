@@ -31,13 +31,7 @@ pip3 install uniport
 
 ```Python
 # integration function
-adata = up.Run(adatas=None, adata_cm=None, mode='h', lambda_s=0.5, labmda_recon=1.0,
-     lambda_kl=0.5, lambda_ot=1.0, reg=0.1, reg_m=1.0, batch_size=256, lr=2e-4, 
-     max_iteration=30000, seed=124, gpu=0, Prior=None, label_weight=None, 
-     ref_id=None,save_OT=False, use_specific=True, loss_type='BCE', outdir='output/', 
-     out='latent', input_id=0, pred_id=1, source_name='source', rep_celltype='cell_type', 
-     batch_key='domain_id', enc=None, dec=None, umap=False, verbose=False, assess=False,
-     show=False)
+adata = up.Run(adatas=None, adata_cm=None, mode='h', lambda_s=0.5, labmda_recon=1.0, lambda_kl=0.5, lambda_ot=1.0, reg=0.1, reg_m=1.0, batch_size=256, lr=2e-4, max_iteration=30000, seed=124, gpu=0, Prior=None, label_weight=None, ref_id=None, save_OT=False, use_specific=True, loss_type='BCE', outdir='output/', out='latent', input_id=0, pred_id=1, source_name='source', rep_celltype='cell_type', batch_key='domain_id', enc=None, dec=None, umap=False, verbose=False, assess=False, show=False)
 ```
 
 ### The key parameters includes:

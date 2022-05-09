@@ -1,5 +1,8 @@
-Tutorials
+Homepage
 =========
+
+Tutorials
+---------
 
 .. toctree::
    :maxdepth: 2
@@ -7,7 +10,7 @@ Tutorials
    self
    install
    examples/index
-   api
+   API/api
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_
