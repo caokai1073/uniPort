@@ -42,17 +42,17 @@ Model
 .. autosummary::
     :toctree: .
 
-    Model.vae.VAE
-    Model.layer.DSBatchNorm
-    Model.layer.Block
-    Model.layer.NN
-    Model.layer.Encoder
-    Model.layer.Decoder
-    Model.loss.kl_div
-    Model.loss.distance_matrix
-    Model.loss.distance_gmm
-    Model.utils.onehot
-    Model.utils.EarlyStopping
+    model.vae.VAE
+    model.layer.DSBatchNorm
+    model.layer.Block
+    model.layer.NN
+    model.layer.Encoder
+    model.layer.Decoder
+    model.loss.kl_div
+    model.loss.distance_matrix
+    model.loss.distance_gmm
+    model.utils.onehot
+    model.utils.EarlyStopping
 
 Evaluation
 ----------
