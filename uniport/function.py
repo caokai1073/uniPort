@@ -13,8 +13,8 @@ import scipy
 import pandas as pd
 from scipy.sparse import issparse
 
-from .modal.vae import VAE
-from .modal.utils import EarlyStopping
+from .model.vae import VAE
+from .model.utils import EarlyStopping
 from .metrics import batch_entropy_mixing_score, silhouette
 from .logger import create_logger
 from .data_loader import load_data
@@ -220,7 +220,6 @@ def Run(
         ref_id=None,    
         save_OT=False,
         rep_celltype='cell_type',
-        use_specific=True,
         lambda_s=0.5,
         labmda_recon=1.0,
         lambda_kl=0.5,
@@ -237,7 +236,7 @@ def Run(
         out='latent',
         input_id=0,
         pred_id=1,
-        umap=True,
+        umap=False,
         verbose=False,
         assess=False,
         show=False,
@@ -248,7 +247,7 @@ def Run(
         dec=None,
     ):
 
-    """
+    r"""
     main function
     
     Parameters
@@ -271,12 +270,10 @@ def Run(
         If True, output a global OT plan. Need more memory. Default: False
     rep_celltype
         Names of cell-type annotation in AnnData. Default: 'cell_type'
-    use_specific
-        If True, specific genes in each dataset will be considered. Default: True
     lambda_s
         Balanced parameter for common and specific genes. Default: 0.5
     lambda_recon: 
-        Balanced parameter for reconstruct term. Default: 0.5
+        Balanced parameter for reconstruct term. Default: 1.0
     lambda_kl: 
         Balanced parameter for KL divergence. Default: 0.5
     lambda_ot:
@@ -291,6 +288,8 @@ def Run(
         Learning rate. Default: 2e-4
     max_iteration
         Max iterations for training. Training one batch_size samples is one iteration. Default: 30000
+    loss_type
+        type of loss. 'BCE', 'MSE' or 'L1'. Default: 'BCE'
     seed
         Random seed for torch and numpy. Default: 124
     gpu
@@ -308,7 +307,7 @@ def Run(
     pred_id
         Only used when out=='predict' to choose a decoder to predict data. Default: 1
     umap
-        If True, perform UMAP for visualization. Default: True
+        If True, perform UMAP for visualization. Default: False
     verbose
         Verbosity, True or False. Default: False
     assess
@@ -325,11 +324,6 @@ def Run(
         structure of encoder
     dec
         structure of decoder
-    
-    Return
-    ------
-    Weights
-        a vector of weight 
     """
 
     if mode == 'h' and adata_cm is None:
@@ -354,6 +348,8 @@ def Run(
     os.makedirs(outdir+'/checkpoint', exist_ok=True)
     log = create_logger('', fh=outdir+'log.txt')
 
+    use_specific=True
+
     # split adata_cm to adatas
     if adatas is None:  
         use_specific = False
@@ -375,11 +371,18 @@ def Run(
     num_gene = []
 
     for i, adata in enumerate(adatas):
-        print('dataset {}:'.format(i))
+        print('Dataset {}:'.format(i), adata.obs[source_name][0])
         print(adata)
         num_cell.append(adata.X.shape[0])
         num_gene.append(adata.X.shape[1])
-        print('reference dataset {}'.format(ref_id))
+
+    print('Reference dataset is dataset {}'.format(ref_id))
+    print('\n')
+
+    if adata_cm is not None:
+        print('Data with common HVG')
+        print(adata_cm)
+        print('\n')
 
     # training
     if out == 'latent':
@@ -401,9 +404,6 @@ def Run(
                     print(tran[i].dtype)
 
                     print('Size of transport plan between datasets {} and {}:'.format(i, ref_id), np.shape(tran[i]))
-
-        if adata_cm is not None:
-            print(adata_cm)
 
         trainloader, testloader = load_data(
             adatas=adatas, 
@@ -510,9 +510,9 @@ def Run(
 
 
     if umap: #and adata.shape[0]<1e6:
-        log.info('Plot umap')
+        log.info('Run UMAP')
         sc.settings.figdir = outdir
-        sc.set_figure_params(dpi=200, fontsize=10)
+        # sc.set_figure_params(dpi=200, fontsize=10)
  
         if mode == 'h':
             sc.pp.neighbors(adata_cm, n_neighbors=30, use_rep=out)
@@ -523,8 +523,7 @@ def Run(
             color = [c for c in cols if c in adata_cm.obs]
 
             if len(color) > 0:
-                sc.pl.umap(adata_cm, color=color, save='test.pdf', title=['',''], legend_fontsize=10, s=2, show=show, \
-                        wspace=0.4)
+                sc.pl.umap(adata_cm, color=color, save='result.pdf', show=show)
  
             if assess:
                 if len(adata_cm.obs[batch_key].cat.categories) > 1:

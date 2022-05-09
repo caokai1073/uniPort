@@ -189,7 +189,7 @@ class VAE(nn.Module):
             label_weight=None,
             Prior=None,
             save_OT=False,
-            use_specific=False,
+            use_specific=True,
             lambda_s=0.5,
             lambda_kl=0.5,
             labmda_recon=1.0,
@@ -221,31 +221,37 @@ class VAE(nn.Module):
             If 'h', integrate data with common genes
             If 'v', integrate data profiled from the same cells
             If 'd', inetrgate data without common genes
-            Default: 'h'.
+            Default: 'h'
         label_weight
-            Prior-guided weighted vectors. Default: None.
+            Prior-guided weighted vectors. Default: None
         Prior
             Prior correspondence matrix.
         save_OT
-            If True, output a global OT plan. Default: False.
+            If True, output a global OT plan. Default: False
         use_specific
-            If True, specific genes in each dataset will be considered. Default: True.
+            If True, specific genes in each dataset will be considered. Default: True
         lambda_s
-            Balanced parameter for specific genes. Default: 0.5.
-        Lambda: 
-            Balanced parameter for KL divergence. Default: 0.5.
+            Balanced parameter for specific genes. Default: 0.5
+        lambda_kl: 
+            Balanced parameter for KL divergence. Default: 0.5
+        lambda_recon:
+            Balanced parameter for reconstruction. Default: 1.0
         lambda_ot:
-            Balanced parameter for OT. Default: 1.0.
+            Balanced parameter for OT. Default: 1.0
+        reg:
+            Entropy regularization parameter in OT. Default: 0.1
+        reg_m:
+            Unbalanced OT parameter. Larger values means more balanced OT. Default: 1.0
         lr
-            Learning rate. Default: 2e-4.
+            Learning rate. Default: 2e-4
         max_iteration
-            Max iterations for training. Training one batch_size samples is one iteration. Default: 60000.
+            Max iterations for training. Training one batch_size samples is one iteration. Default: 60000
         early_stopping
-            EarlyStopping class (definite in utils.py) for stoping the training if loss doesn't improve after a given patience. Default: None.
+            EarlyStopping class (definite in utils.py) for stoping the training if loss doesn't improve after a given patience. Default: None
         device
-            'cuda' or 'cpu' for training. Default: 'cuda'.
+            'cuda' or 'cpu' for training. Default: 'cuda'
         verbose
-            Verbosity, True or False. Default: False.
+            Verbosity, True or False. Default: False
     
         
         Returns
@@ -292,7 +298,7 @@ class VAE(nn.Module):
                         z, mu, var = self.encoder(x_list[0], 0)
                         kl_loss += kl_div(mu, var) 
                         recon = self.decoder(z, 0)
-                        recon_loss = loss_func(recon, x_list[0]) * 2000 * labmda_recon
+                        recon_loss = loss_func(recon, x_list[0]) * 2000
 
                         for j in range(1, self.n_domain):
 
@@ -447,19 +453,19 @@ class VAE(nn.Module):
                         recon_x_c = self.decoder(z, 0, y)        
    
                         if label_weight is None:
-                            recon_loss = loss_func(recon_x_c, x_c) * 2000 * labmda_recon
+                            recon_loss = loss_func(recon_x_c, x_c) * 2000
                         else:
                             for j, weight in enumerate(label_weight):
 
                                 if len(loc[j])>0:
                                     if weight is None:
                                         recon_loss += 1/self.n_domain * loss_func(recon_x_c[loc[j]], x_c[loc[j]]) * \
-                                        2000 * labmda_recon
+                                        2000
                                         # kl_loss += kl_div(mu[loc[j]], var[loc[j]])                               
                                     else:
                                         weight = weight.to(device)
                                         recon_loss += 1/self.n_domain * F.binary_cross_entropy(recon_x_c[loc[j]], x_c[loc[j]], weight=weight[idx[j]]) * \
-                                        2000 * labmda_recon
+                                        2000
                                         # kl_loss += kl_div(mu[loc[j]], var[loc[j]], weight[idx[j]])
 
                         kl_loss = kl_div(mu, var) 

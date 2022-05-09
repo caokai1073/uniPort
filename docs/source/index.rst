@@ -10,7 +10,7 @@ Tutorials
    self
    install
    examples/index
-   API/api
+   all
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_
