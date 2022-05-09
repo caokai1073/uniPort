@@ -24,10 +24,12 @@ pip3 install uniport
 
 ## Tutorials
 
+### Please checkout the documentations and tutorials for more information at **[uniport.readthedocs.io](https://uniport.readthedocs.io)**.
+
 ### Main function: **uniport.Run**()
 
 
-<font color='Dodgerblue'>**Key parameters includes:**</font>
+**Key parameters includes:**
 
 + **adatas**: List of AnnData matrices for each dataset.
 + **adata_cm**: AnnData matrix containing common genes from different datasets.
