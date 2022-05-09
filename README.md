@@ -71,4 +71,38 @@ adata = up.Run(adatas=None, adata_cm=None, mode='h', lambda_s=0.5, labmda_recon=
 + **assess**: if True, calculate the entropy_batch_mixing score and silhouette score to evaluate integration results. Default: False
 + **show**: if True, show the UMAP visualization of latent space. Default: False
 
+## Example
+```Python
+import uniport as up
+import scanpy as sc
 
+# HVG: highly variable genes
+adata1 = sc.read_h5ad('adata1.h5ad') # preprocessed data with data1 specific HVG
+adata2 = sc.read_h5ad('adata2.h5ad') # preprocessed data with data2 specific HVG, as reference data
+adata_cm = sc.read_h5ad('adata_cm.h5ad') # preprocesssed data with common HVG
+
+# integration with both common and dataset-specific genes
+adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
+# save global optimal transport matrix
+adata, OT = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm, save_OT=True)
+# integration with only common genes
+adata = up.Run(adata_cm=adata_cm)
+
+# integration without common genes
+adata = up.Run(adatas=[adata1, adata2], mode='d')
+
+# integration with paired datasets
+adata = up.Run(adatas=[adata1, adata2], mode='v')
+```
+
+## Citation
+```
+@article {Cao2022.02.14.480323,
+	author = {Cao, Kai and Gong, Qiyu and Hong, Yiguang and Wan, Lin},
+	title = {uniPort: a unified computational framework for single-cell data integration with optimal transport},
+	year = {2022},
+	doi = {10.1101/2022.02.14.480323},
+	publisher = {Cold Spring Harbor Laboratory},
+	journal = {bioRxiv}
+}
+```
