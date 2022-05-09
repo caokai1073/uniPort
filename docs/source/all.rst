@@ -4,10 +4,10 @@
 API and modules
 ===============
 
-.. currentmodule:: unipoty
+.. currentmodule:: uniport
 
 
-:py:mod:`ot`:
+:py:mod:`uniport`:
 
 .. autosummary::
    :toctree: gen_modules/
