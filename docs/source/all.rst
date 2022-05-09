@@ -13,6 +13,8 @@ API and modules
    :toctree: gen_modules/
    :template: module.rst
 
+   Run
+
 .. autosummary::
    :toctree: ../modules/generated/
    :template: module.rst

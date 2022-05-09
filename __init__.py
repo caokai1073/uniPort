@@ -8,3 +8,5 @@ __email__ = 'caokai@amss.ac.cn'
 from .function import Run, Get_label_Prior, label_reweight, load_file, filter_data, batch_scale
 
 __all__ = ['Run', 'Get_label_Prior', 'label_reweight', 'load_file', 'filter_data', 'batch_scale']
+
+name = "uniport"
