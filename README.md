@@ -6,7 +6,7 @@
 The original paper: 
 [a unified single-cell data integration framework with optimal transport](https://www.biorxiv.org/content/10.1101/2022.02.14.480323v1)
 
-![Overview](docs/_static/net.png)
+![Overview](docs/source/_static/net.png)
 
 Website and documentation: [https://uniport.readthedocs.io](https://uniport.readthedocs.io)
 

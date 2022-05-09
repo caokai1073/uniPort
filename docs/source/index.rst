@@ -4,6 +4,9 @@ Home
 Tutorials
 ---------
 
+.. image:: _static/net.png
+   :alt: Overview
+
 .. toctree::
    :maxdepth: 2
    :hidden:
