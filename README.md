@@ -22,11 +22,10 @@ The **uniport** package can be installed via pip:
 pip3 install uniport
 ```
 
-## Usage
+## Tutorials
 
 
-### Please checkout the documentations and tutorials for more information at
-## **[uniport.readthedocs.io](https://uniport.readthedocs.io)**.
++ ### Please checkout the documentations and tutorials for more information at **[uniport.readthedocs.io](https://uniport.readthedocs.io)**.
 
 ### Main function: **uniport.Run**()
 
@@ -70,13 +69,10 @@ adata = up.Run(adatas=[adata1, adata2], mode='v')
 ```
 
 ## Citation
-```
-@article {Cao2022.02.14.480323,
+    @article{Cao2022.02.14.480323,
 	author = {Cao, Kai and Gong, Qiyu and Hong, Yiguang and Wan, Lin},
 	title = {uniPort: a unified computational framework for single-cell data integration with optimal transport},
 	year = {2022},
 	doi = {10.1101/2022.02.14.480323},
 	publisher = {Cold Spring Harbor Laboratory},
-	journal = {bioRxiv}
-}
-```
+	journal = {bioRxiv}}
