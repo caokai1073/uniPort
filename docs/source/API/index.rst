@@ -5,6 +5,10 @@
 API and modules
 ===============
 
+Import uniPort::
+
+   import uniport
+
 Function
 --------
 .. module:: uniport

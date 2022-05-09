@@ -29,7 +29,7 @@ DATA_PATH = os.path.expanduser("~")+'/.uniport/'
 CHUNK_SIZE = 20000
 
 def read_mtx(path):
-    r"""
+    """
     Read mtx format data folder including: 
     
         * matrix file: e.g. count.mtx or matrix.mtx or their gz format
@@ -63,7 +63,7 @@ def read_mtx(path):
 
 
 def load_file(path):  
-    r"""
+    """
     Load single cell dataset from file
     
     Parameters
@@ -102,7 +102,7 @@ def filter_data(
         min_cells: int = 0,     
         log=None
     ):
-    r"""
+    """
     Filter cells and genes
     
     Parameters
@@ -129,7 +129,7 @@ def filter_data(
     return adata
 
 def batch_scale(adata, chunk_size=CHUNK_SIZE):
-    r"""
+    """
     Batch-specific scale data
     
     Parameters
@@ -152,8 +152,7 @@ def batch_scale(adata, chunk_size=CHUNK_SIZE):
     return adata
 
 def Get_label_Prior(alpha, celltype1, celltype2):
-
-    r"""
+    """
     Create a prior correspondence matrix according to cell labels
     
     Parameters
@@ -183,8 +182,7 @@ def Get_label_Prior(alpha, celltype1, celltype2):
     return Couple
 
 def label_reweight(celltype):
-
-    r"""
+    """
     Reweight labels to let all cell types share the same total weight 
     
     Parameters
@@ -246,9 +244,8 @@ def Run(
         enc=None,
         dec=None,
     ):
-
-    r"""
-    main function
+    """
+    Integration function
     
     Parameters
     ----------
@@ -324,6 +321,12 @@ def Run(
         structure of encoder
     dec
         structure of decoder
+
+    Returns
+    -------
+    The output folder contains:
+    adata.h5ad
+        The AnnData matrice after integration. The low-dimensional representation of the data is stored at adata.obsm['latent'].
     """
 
     if mode == 'h' and adata_cm is None:

@@ -3,6 +3,7 @@
 # -- Project information
 
 import inspect
+import uniport
 
 import sphinx_autodoc_typehints
 
@@ -10,8 +11,8 @@ project = 'uniPort'
 copyright = u'2022, Kai Cao'
 author = 'Kai Cao'
 
-release = '1.0.5'
-version = '1.0.5'
+release = uniport.__version__
+version = uniport.__version__
 
 # -- General configuration
 
@@ -30,6 +31,18 @@ extensions = [
     'nbsphinx',
     'myst_parser',
 ]
+
+# Generate the API documentation when building
+autosummary_generate = True
+autodoc_member_order = 'bysource'
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
+napoleon_custom_sections = [('Params', 'Parameters')]
+todo_include_todos = False
 
 
 intersphinx_mapping = {

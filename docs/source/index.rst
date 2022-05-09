@@ -6,7 +6,9 @@ Tutorials
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
+   self
    install
    examples/index
    API/index
