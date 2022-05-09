@@ -1,57 +1,68 @@
-{{ fullname }}
-{{ underline }}
+{{ fullname | escape | underline}}
 
 .. automodule:: {{ fullname }}
 
+   {% block attributes %}
+   {% if attributes %}
+   .. rubric:: Module attributes
+
+   .. autosummary::
+      :toctree:
+   {% for item in attributes %}
+      {{ item }}
+   {%- endfor %}
+   {% endif %}
+   {% endblock %}
+
    {% block functions %}
    {% if functions %}
+   .. rubric:: {{ _('Functions') }}
 
-   Functions
-   ---------
-
+   .. autosummary::
+      :toctree:
+      :nosignatures:
    {% for item in functions %}
-
-   .. autofunction:: {{ item }}
-
-   .. include:: backreferences/{{fullname}}.{{item}}.examples
-
-   .. raw:: html
-
-	       <div class="sphx-glr-clear"></div>
-
+      {{ item }}
    {%- endfor %}
    {% endif %}
    {% endblock %}
 
    {% block classes %}
    {% if classes %}
+   .. rubric:: {{ _('Classes') }}
 
-   Classes
-   -------
-
+   .. autosummary::
+      :toctree:
+      :template: class.rst
+      :nosignatures:
    {% for item in classes %}
-   .. autoclass:: {{ item }}
-      :members:
-
-   .. include:: backreferences/{{fullname}}.{{item}}.examples
-
-   .. raw:: html
-
-	       <div class="sphx-glr-clear"></div>
-
+      {{ item }}
    {%- endfor %}
    {% endif %}
    {% endblock %}
 
    {% block exceptions %}
    {% if exceptions %}
-
-   Exceptions
-   ----------
+   .. rubric:: {{ _('Exceptions') }}
 
    .. autosummary::
+      :toctree:
    {% for item in exceptions %}
       {{ item }}
    {%- endfor %}
    {% endif %}
    {% endblock %}
+
+{% block modules %}
+{% if modules %}
+.. rubric:: Submodules
+
+.. autosummary::
+   :toctree:
+   :template: module.rst
+   :recursive:
+{% for item in modules %}
+   {{ item }}
+{%- endfor %}
+{% endif %}
+{% endblock %}

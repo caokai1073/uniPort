@@ -7,10 +7,11 @@ import inspect
 import sphinx_autodoc_typehints
 
 project = 'uniPort'
+copyright = u'2022, Kai Cao'
 author = 'Kai Cao'
 
-release = '1.0.4'
-version = '1.0.4'
+release = '1.0.5'
+version = '1.0.5'
 
 # -- General configuration
 
