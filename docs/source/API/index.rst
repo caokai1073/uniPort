@@ -51,6 +51,7 @@ Model
     model.loss.kl_div
     model.loss.distance_matrix
     model.loss.distance_gmm
+    model.loss.unbalanced_ot
     model.utils.onehot
     model.utils.EarlyStopping
 
