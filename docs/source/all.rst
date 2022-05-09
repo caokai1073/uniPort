@@ -13,7 +13,7 @@ API and modules
    :toctree: gen_modules/
    :template: module.rst
 
-   function
+   Run
    load_file
 
 
