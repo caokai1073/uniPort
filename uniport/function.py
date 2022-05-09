@@ -29,7 +29,7 @@ DATA_PATH = os.path.expanduser("~")+'/.uniport/'
 CHUNK_SIZE = 20000
 
 def read_mtx(path):
-    """\
+    """
     Read mtx format data folder including: 
     
         * matrix file: e.g. count.mtx or matrix.mtx or their gz format
@@ -167,8 +167,8 @@ def Get_label_Prior(alpha, celltype1, celltype2):
 
     Return
     ------
-    Couple
-        a prior correspondence matrix 
+    torch.tensor
+        a prior correspondence matrix between cells
     """
 
     Couple = alpha*torch.ones(len(celltype1), len(celltype2))
@@ -194,7 +194,7 @@ def label_reweight(celltype):
 
     Return
     ------
-    Weights
+    torch.tensor
         a vector of weights of cells 
     """
 
