@@ -8,7 +8,6 @@ Tutorials
    :alt: Overview
 
 .. toctree::
-   :hidden:
 
    self
    install
