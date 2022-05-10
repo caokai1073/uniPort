@@ -185,12 +185,12 @@ def Get_label_Prior(alpha, celltype1, celltype2):
 def label_reweight(celltype):
 
     """
-    Reweight labels to let all cell types share the same total weight 
+    Reweight labels to make all cell types share the same total weight 
     
     Parameters
     ----------
     celltype
-        cell labels 
+        cell labels
 
     Return
     ------
@@ -246,7 +246,7 @@ def Run(
         show=False,
     ):
 
-    r"""
+    """
     Run data integration
     
     Parameters
@@ -329,7 +329,7 @@ def Run(
     checkpoint
         model.pt contains the variables of the model and config.pt contains the parameters of the model.
     log.txt
-        Records raw data information, model parameters etc.
+        Records model parameters.
     umap.pdf 
         UMAP plot for visualization if umap=True.
     """
@@ -524,7 +524,7 @@ def Run(
         # sc.set_figure_params(dpi=200, fontsize=10)
  
         if mode == 'h':
-            sc.pp.neighbors(adata_cm, n_neighbors=30, use_rep=out)
+            sc.pp.neighbors(adata_cm, use_rep=out)
             sc.tl.umap(adata_cm, min_dist=0.1)
             sc.tl.leiden(adata_cm)
             

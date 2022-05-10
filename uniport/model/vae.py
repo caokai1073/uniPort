@@ -18,7 +18,7 @@ from .loss import *
 
 class VAE(nn.Module):
     """
-    VAE framework
+    Variational Autoencoder framework
     """
     def __init__(self, enc, dec, ref_id, n_domain, mode):
         """
@@ -186,6 +186,7 @@ class VAE(nn.Module):
             num_cell,
             num_gene,
             mode='h',
+            loss_type='BCE',
             label_weight=None,
             Prior=None,
             save_OT=False,
@@ -201,7 +202,6 @@ class VAE(nn.Module):
             early_stopping=None,
             device='cuda:0',  
             verbose=False,
-            loss_type='BCE'
         ):
         """
         train VAE
@@ -222,6 +222,8 @@ class VAE(nn.Module):
             If 'v', integrate data profiled from the same cells
             If 'd', inetrgate data without common genes
             Default: 'h'
+        loss_type
+            type of loss. Choose between ['BCE', 'MSE'm 'L1']. Default: 'BCE'
         label_weight
             Prior-guided weighted vectors. Default: None
         Prior
@@ -252,11 +254,6 @@ class VAE(nn.Module):
             'cuda' or 'cpu' for training. Default: 'cuda'
         verbose
             Verbosity, True or False. Default: False
-    
-        
-        Returns
-        -------
-   
         """
 
         self.to(device)

@@ -91,9 +91,6 @@ def silhouette(
     :param embed: embedding key in adata.obsm, default: 'X_pca'
     :param scale: default True, scale between 0 (worst) and 1 (best)
     """
-    # if embed not in adata.obsm.keys():
-        # print(adata.obsm.keys())
-        # raise KeyError(f'{embed} not in obsm')
     asw = silhouette_score(
         X,
         cell_type,
@@ -105,7 +102,6 @@ def silhouette(
 
 def label_transfer(ref, query, rep='latent', label='celltype'):
     """
-    From SCALEX
     Label transfer
     
     Parameters

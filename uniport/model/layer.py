@@ -63,10 +63,10 @@ class DSBatchNorm(nn.Module):
             if len(indices) > 1:
                 out[indices] = self.bns[i](x[indices])
             elif len(indices) == 1:
-                out[indices] = x[indices]
-#                 self.bns[i].training = False
-#                 out[indices] = self.bns[i](x[indices])
-#                 self.bns[i].training = True
+                # out[indices] = x[indices]
+                self.bns[i].training = False
+                out[indices] = self.bns[i](x[indices])
+                self.bns[i].training = True
         return out
         
 
@@ -187,6 +187,8 @@ class Encoder(nn.Module):
             input dimension
         cfg
             encoder configuration, e.g. enc_cfg = [['fc', 1024, 1, 'relu'],['fc', 10, '', '']]
+        mode
+            training mode. ['h', 'd', 'v']
         """
         super().__init__()
 
@@ -232,8 +234,8 @@ class Decoder(nn.Module):
         """
         Parameters
         ----------
-        input_dim
-            input dimension
+        z_dim
+            latent dimension
         cfg
             decoder configuration, e.g. dec_cfg = [['fc', adatas[i].obsm[obsm[i]].shape[1], 1, 'sigmoid']]
         """

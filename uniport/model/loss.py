@@ -22,10 +22,20 @@ def kl_div(mu, var, weight=None):
 def distance_matrix(pts_src: torch.Tensor, pts_dst: torch.Tensor, p: int = 2):
     """
     Returns the matrix of ||x_i-y_j||_p^p.
-    :param pts_src: [R, D] matrix
-    :param pts_dst: [C, D] matrix
-    :param p:
-    :return: [R, C] distance matrix
+
+    Parameters
+    ----------
+    pts_src
+        [R, D] matrix
+    pts_dst
+        C, D] matrix
+    p
+        p-norm
+    
+    Return
+    ------
+    [R, C] matrix
+        distance matrix
     """
     x_col = pts_src.unsqueeze(1)
     y_row = pts_dst.unsqueeze(0)
@@ -35,11 +45,22 @@ def distance_matrix(pts_src: torch.Tensor, pts_dst: torch.Tensor, p: int = 2):
 def distance_gmm(mu_src: torch.Tensor, mu_dst: torch.Tensor, var_src: torch.Tensor, var_dst: torch.Tensor):
     """
     Calculate a Wasserstein distance matrix between the gmm distributions with diagonal variances
-    :param mu_src: [R, D] matrix, the means of R Gaussian distributions
-    :param mu_dst: [C, D] matrix, the means of C Gaussian distributions
-    :param logvar_src: [R, D] matrix, the log(variance) of R Gaussian distributions
-    :param logvar_dst: [C, D] matrix, the log(variance) of C Gaussian distributions
-    :return: [R, C] distance matrix
+
+    Parameters
+    ----------
+    mu_src
+        [R, D] matrix, the means of R Gaussian distributions
+    mu_dst
+        [C, D] matrix, the means of C Gaussian distributions
+    logvar_src
+        [R, D] matrix, the log(variance) of R Gaussian distributions
+    logvar_dst
+        [C, D] matrix, the log(variance) of C Gaussian distributions
+    
+    Return
+    ------
+    [R, C] matrix 
+        distance matrix
     """
     std_src = var_src.sqrt()
     std_dst = var_dst.sqrt()
@@ -52,6 +73,45 @@ def distance_gmm(mu_src: torch.Tensor, mu_dst: torch.Tensor, var_src: torch.Tens
 
 def unbalanced_ot(tran, mu1, var1, mu2, var2, reg=0.1, reg_m=1.0, Couple=None, device='cpu', \
     idx_q=None, idx_r=None, query_weight=None, ref_weight=None):
+    '''
+    Calculate a unbalanced optimal transport matrix between mini batches.
+
+    Parameters
+    ----------
+    tran
+        transport matrix between the two batches sampling from the global OT matrix. 
+    mu1
+        mean vector of batch 1 from the encoder
+    var1
+        standard deviation vector of batch 1 from the encoder
+    mu2
+        mean vector of batch 2 from the encoder
+    var2
+        standard deviation vector of batch 2 from the encoder
+    reg:
+        Entropy regularization parameter in OT. Default: 0.1
+    reg_m:
+        Unbalanced OT parameter. Larger values means more balanced OT. Default: 1.0
+    Couple
+        prior information about weights between cell correspondence. Default: None
+    device
+        training device
+    idx_q
+        domain_id of query batch
+    idx_r
+        domain_id of reference batch
+    query_weight
+        reweighted vectors of query batch
+    ref_weight
+        reweighted vectors of reference batch
+
+    Returns
+    -------
+    float
+        minibatch unbalanced optimal transport loss
+    matrix
+        minibatch unbalanced optimal transport matrix
+    '''
 
     ns = mu1.size(0)
     nt = mu2.size(0)

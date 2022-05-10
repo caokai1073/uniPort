@@ -29,10 +29,9 @@ class BatchSampler(Sampler):
         batch_size
             batch size for each sampling
         batch_id
-            batch id of all samples
+            batch id of samples
         drop_last
-            drop the last samples that not up to one batch
-            
+            drop the last samples that not up to one batch        
         """
         self.batch_size = batch_size
         self.drop_last = drop_last
@@ -64,8 +63,7 @@ class BatchSampler(Sampler):
 
 class BatchSampler_balance(Sampler):
     """
-    Batch-specific Sampler
-    sampled data of each batch is from the same dataset.
+    Balanced batch-specific Sampler
     """
     def __init__(self, batch_size, num_cell, batch_id, drop_last=False):
         """
@@ -75,11 +73,12 @@ class BatchSampler_balance(Sampler):
         ----------
         batch_size
             batch size for each sampling
+        number_cell
+            number of cells for each cell types
         batch_id
             batch id of all samples
         drop_last
             drop the last samples that not up to one batch
-            
         """
         self.batch_size = batch_size
         self.num_cell = num_cell
@@ -126,6 +125,7 @@ class BatchSampler_balance(Sampler):
 
     
 class SingleCellDataset(Dataset):
+
     def __init__(self, data, batch):
         
         self.data = data
@@ -161,8 +161,44 @@ class SingleCellDataset_vertical(Dataset):
 
         return x, idx
     
-def load_data(adatas, num_cell=None, max_gene=None, adata_cm=None, use_specific=False, domain_name='domain_id', batch_size=128, mode='h', \
+def load_data(adatas, mode='h', num_cell=None, max_gene=None, adata_cm=None, use_specific=False, domain_name='domain_id', batch_size=256, \
     drop_last=True, shuffle=True, num_workers=4):
+
+    '''
+    Load data for training.
+
+    Parameters
+    ----------
+    adatas
+        A list of AnnData matrice.
+    mode
+        training mode. Choose between ['h', 'd', 'v'].
+    num_cell
+        numbers of cells of each adata in adatas.
+    max_gene
+        maximum number of genes of each adata in adatas.
+    adata_cm
+        adata with common genes of adatas.
+    use_specific
+        use dataset-specific genes.
+    domain_name
+        domain name of each adata in adatas.
+    batch_size
+        size of each mini batch for training.
+    drop_last
+        drop the last samples that not up to one batch.
+    shuffle
+        shuffle the data
+    num_workers
+        number parallel load processes according to cpu cores.
+
+    Returns
+    -------
+    trainloader
+        data loader for training
+    testloader
+        data loader for testing
+    '''
 
     if mode == 'd':
 
@@ -220,7 +256,7 @@ def load_data(adatas, num_cell=None, max_gene=None, adata_cm=None, use_specific=
 
     # scdata = SingleCellDataset(adata_cm.X, adata_cm.obs['batch'].cat.codes.values.astype(int), mode='batchcorrect')
 
-    if min(num_cell)<0.02*max(num_cell):
+    if min(num_cell)<0.02*max(num_cell):  # if samples in one domain is too less, use the balanced batch sampler.
 
         balance_sampler = BatchSampler_balance(batch_size, num_cell, adata_cm.obs[domain_name].astype(int).tolist(), drop_last=True)
         trainloader = DataLoader(

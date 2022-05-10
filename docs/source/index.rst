@@ -8,7 +8,6 @@ Tutorials
    :alt: Overview
 
 .. toctree::
-   :maxdepth: 2
    :hidden:
 
    self
