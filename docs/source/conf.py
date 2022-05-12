@@ -17,17 +17,14 @@ version = uniport.__version__
 # -- General configuration
 
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode',
-    'sphinx_markdown_tables',
+    'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx_copybutton',
+    'sphinx.ext.autosummary',
+    'sphinx_autodoc_typehints',
     'nbsphinx',
     'myst_parser',
 ]
@@ -61,11 +58,11 @@ html_theme = 'sphinx_rtd_theme'
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
 
-latex_engine = 'xelatex'
-latex_use_xindy = False
-latex_elements = {
-    'preamble': '\\usepackage[UTF8]{ctex}\n',
-}
+# latex_engine = 'xelatex'
+# latex_use_xindy = False
+# latex_elements = {
+#     'preamble': '\\usepackage[UTF8]{ctex}\n',
+# }
 
 html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
 
