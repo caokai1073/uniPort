@@ -17,14 +17,17 @@ version = uniport.__version__
 # -- General configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
+    'sphinx.ext.duration',
     'sphinx.ext.doctest',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
+    'sphinx_markdown_tables',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx.ext.autosummary',
-    'sphinx_autodoc_typehints',
+    'sphinx_copybutton',
     'nbsphinx',
     'myst_parser',
 ]
