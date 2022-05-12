@@ -14,6 +14,8 @@ Tutorials
    install
    examples/index
    API/index
+   release
+
 
 .. include:: README.md
    :parser: myst_parser.sphinx_

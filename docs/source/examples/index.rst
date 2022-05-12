@@ -5,4 +5,5 @@ Examples
 
    PBMC/pbmc
    MERFISH/merfish
+   vertical_snare_cell_line
 

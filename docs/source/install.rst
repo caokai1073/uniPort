@@ -13,7 +13,7 @@ After a correct installation, you should be able to import the module without er
 
    import uniport as up
 
-If you have cuda devices, consider install Pytorch cuda version:
+We highly recommand training the model with Nvidia GPU devices, consider install Pytorch cuda version:
 
 .. code-block:: console
 
