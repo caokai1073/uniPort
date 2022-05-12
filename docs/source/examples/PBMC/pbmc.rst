@@ -6,6 +6,7 @@ Integrate scATAC and scRNA
 
    pbmc_preprocess
    pbmc_integration
+   mouse_spleen
 
 
 
