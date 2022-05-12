@@ -17,11 +17,11 @@ from .loss import *
 
 
 class VAE(nn.Module):
-    """
+    r"""
     Variational Autoencoder framework
     """
     def __init__(self, enc, dec, ref_id, n_domain, mode):
-        """
+        r"""
         Parameters
         ----------
         enc
@@ -52,7 +52,7 @@ class VAE(nn.Module):
         self.ref_id = ref_id
   
     def load_model(self, path):
-        """
+        r"""
         Load trained model parameters dictionary.
         Parameters
         ----------
@@ -76,7 +76,7 @@ class VAE(nn.Module):
             device='cuda', 
             eval=False,
         ):
-        """
+        r"""
         Inference
 
         Parameters
@@ -203,7 +203,7 @@ class VAE(nn.Module):
             device='cuda:0',  
             verbose=False,
         ):
-        """
+        r"""
         train VAE
 
         Parameters

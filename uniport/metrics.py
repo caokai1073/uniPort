@@ -15,7 +15,7 @@ def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_sa
     Calculate batch entropy mixing score
     
     Algorithm
-    -----
+    ---------
         * 1. Calculate the regional mixing entropies at the location of 100 randomly chosen cells from all batches
         * 2. Define 100 nearest neighbors for each randomly chosen cell
         * 3. Calculate the mean mixing entropy as the mean of the regional entropies

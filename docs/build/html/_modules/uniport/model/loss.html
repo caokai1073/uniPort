@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>uniport.model.loss &mdash; uniPort 1.0.5 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/clipboard.min.js"></script>
+        <script src="../../../_static/copybutton.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> uniPort
+          </a>
+              <div class="version">
+                1.0.5
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">API and modules</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">uniPort</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>uniport.model.loss</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for uniport.model.loss</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env </span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd"># Author: Kai Cao</span>
+<span class="sd"># Modified from RAE</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">torch.distributions</span> <span class="kn">import</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">kl_divergence</span>
+
+<div class="viewcode-block" id="kl_div"><a class="viewcode-back" href="../../../API/uniport.model.loss.kl_div.html#uniport.model.loss.kl_div">[docs]</a><span class="k">def</span> <span class="nf">kl_div</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">kl_divergence</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()),</span> <span class="n">Normal</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mu</span><span class="p">),</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">var</span><span class="p">)))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># if weight is not None:</span>
+    <span class="c1">#     loss = loss * weight.squeeze(dim=1)</span>
+    <span class="k">return</span> <span class="n">loss</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
+ 
+<span class="c1"># def balanced_binary_cross_entropy(recon_x, x):</span>
+
+<span class="c1">#     return -torch.sum(x * torch.log(recon_x + 1e-8) + (1 - x) * torch.log(1 - recon_x + 1e-8), dim=-1)</span>
+
+<div class="viewcode-block" id="distance_matrix"><a class="viewcode-back" href="../../../API/uniport.model.loss.distance_matrix.html#uniport.model.loss.distance_matrix">[docs]</a><span class="k">def</span> <span class="nf">distance_matrix</span><span class="p">(</span><span class="n">pts_src</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">pts_dst</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the matrix of ||x_i-y_j||_p^p.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pts_src</span>
+<span class="sd">        [R, D] matrix</span>
+<span class="sd">    pts_dst</span>
+<span class="sd">        C, D] matrix</span>
+<span class="sd">    p</span>
+<span class="sd">        p-norm</span>
+<span class="sd">    </span>
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    [R, C] matrix</span>
+<span class="sd">        distance matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x_col</span> <span class="o">=</span> <span class="n">pts_src</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">y_row</span> <span class="o">=</span> <span class="n">pts_dst</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x_col</span> <span class="o">-</span> <span class="n">y_row</span><span class="p">))</span> <span class="o">**</span> <span class="n">p</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">distance</span></div>
+
+<div class="viewcode-block" id="distance_gmm"><a class="viewcode-back" href="../../../API/uniport.model.loss.distance_gmm.html#uniport.model.loss.distance_gmm">[docs]</a><span class="k">def</span> <span class="nf">distance_gmm</span><span class="p">(</span><span class="n">mu_src</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mu_dst</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">var_src</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">var_dst</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate a Wasserstein distance matrix between the gmm distributions with diagonal variances</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mu_src</span>
+<span class="sd">        [R, D] matrix, the means of R Gaussian distributions</span>
+<span class="sd">    mu_dst</span>
+<span class="sd">        [C, D] matrix, the means of C Gaussian distributions</span>
+<span class="sd">    logvar_src</span>
+<span class="sd">        [R, D] matrix, the log(variance) of R Gaussian distributions</span>
+<span class="sd">    logvar_dst</span>
+<span class="sd">        [C, D] matrix, the log(variance) of C Gaussian distributions</span>
+<span class="sd">    </span>
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    [R, C] matrix </span>
+<span class="sd">        distance matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">std_src</span> <span class="o">=</span> <span class="n">var_src</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+    <span class="n">std_dst</span> <span class="o">=</span> <span class="n">var_dst</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+    <span class="n">distance_mean</span> <span class="o">=</span> <span class="n">distance_matrix</span><span class="p">(</span><span class="n">mu_src</span><span class="p">,</span> <span class="n">mu_dst</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">distance_var</span> <span class="o">=</span> <span class="n">distance_matrix</span><span class="p">(</span><span class="n">std_src</span><span class="p">,</span> <span class="n">std_dst</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># distance_var = torch.sum(sum_matrix(std_src, std_dst) - 2 * (prod_matrix(std_src, std_dst) ** 0.5), 2)</span>
+    
+    <span class="k">return</span> <span class="n">distance_mean</span> <span class="o">+</span> <span class="n">distance_var</span> <span class="o">+</span> <span class="mf">1e-6</span></div>
+
+<div class="viewcode-block" id="unbalanced_ot"><a class="viewcode-back" href="../../../API/uniport.model.loss.unbalanced_ot.html#uniport.model.loss.unbalanced_ot">[docs]</a><span class="k">def</span> <span class="nf">unbalanced_ot</span><span class="p">(</span><span class="n">tran</span><span class="p">,</span> <span class="n">mu1</span><span class="p">,</span> <span class="n">var1</span><span class="p">,</span> <span class="n">mu2</span><span class="p">,</span> <span class="n">var2</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">reg_m</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">Couple</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> \
+    <span class="n">idx_q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">idx_r</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">query_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Calculate a unbalanced optimal transport matrix between mini batches.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tran</span>
+<span class="sd">        transport matrix between the two batches sampling from the global OT matrix. </span>
+<span class="sd">    mu1</span>
+<span class="sd">        mean vector of batch 1 from the encoder</span>
+<span class="sd">    var1</span>
+<span class="sd">        standard deviation vector of batch 1 from the encoder</span>
+<span class="sd">    mu2</span>
+<span class="sd">        mean vector of batch 2 from the encoder</span>
+<span class="sd">    var2</span>
+<span class="sd">        standard deviation vector of batch 2 from the encoder</span>
+<span class="sd">    reg:</span>
+<span class="sd">        Entropy regularization parameter in OT. Default: 0.1</span>
+<span class="sd">    reg_m:</span>
+<span class="sd">        Unbalanced OT parameter. Larger values means more balanced OT. Default: 1.0</span>
+<span class="sd">    Couple</span>
+<span class="sd">        prior information about weights between cell correspondence. Default: None</span>
+<span class="sd">    device</span>
+<span class="sd">        training device</span>
+<span class="sd">    idx_q</span>
+<span class="sd">        domain_id of query batch</span>
+<span class="sd">    idx_r</span>
+<span class="sd">        domain_id of reference batch</span>
+<span class="sd">    query_weight</span>
+<span class="sd">        reweighted vectors of query batch</span>
+<span class="sd">    ref_weight</span>
+<span class="sd">        reweighted vectors of reference batch</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        minibatch unbalanced optimal transport loss</span>
+<span class="sd">    matrix</span>
+<span class="sd">        minibatch unbalanced optimal transport matrix</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">ns</span> <span class="o">=</span> <span class="n">mu1</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nt</span> <span class="o">=</span> <span class="n">mu2</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">cost_pp</span> <span class="o">=</span> <span class="n">distance_gmm</span><span class="p">(</span><span class="n">mu1</span><span class="p">,</span> <span class="n">mu2</span><span class="p">,</span> <span class="n">var1</span><span class="p">,</span> <span class="n">var2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">query_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+        <span class="n">p_s</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">ns</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">query_batch_weight</span> <span class="o">=</span> <span class="n">query_weight</span><span class="p">[</span><span class="n">idx_q</span><span class="p">]</span>
+        <span class="n">p_s</span> <span class="o">=</span> <span class="n">query_batch_weight</span><span class="o">/</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">query_batch_weight</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ref_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+        <span class="n">p_t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nt</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">nt</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ref_batch_weight</span> <span class="o">=</span> <span class="n">ref_weight</span><span class="p">[</span><span class="n">idx_r</span><span class="p">]</span>
+        <span class="n">p_t</span> <span class="o">=</span> <span class="n">ref_batch_weight</span><span class="o">/</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ref_batch_weight</span><span class="p">)</span>
+
+    <span class="n">p_s</span> <span class="o">=</span> <span class="n">p_s</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">p_t</span> <span class="o">=</span> <span class="n">p_t</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">tran</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tran</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">nt</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ns</span> <span class="o">*</span> <span class="n">nt</span><span class="p">)</span>
+        <span class="n">tran</span> <span class="o">=</span> <span class="n">tran</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="n">dual</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">ns</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">reg_m</span> <span class="o">/</span> <span class="p">(</span><span class="n">reg_m</span> <span class="o">+</span> <span class="n">reg</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Couple</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cost</span> <span class="o">=</span> <span class="n">cost_pp</span><span class="o">*</span><span class="n">Couple</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cost</span> <span class="o">=</span> <span class="n">cost_pp</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">cost</span> <span class="o">/</span> <span class="p">(</span><span class="n">reg</span><span class="o">*</span><span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">cost</span><span class="p">))))</span> <span class="o">*</span> <span class="n">tran</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">p_t</span> <span class="o">/</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">t</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span> <span class="o">@</span> <span class="n">dual</span><span class="p">)</span>
+        <span class="c1"># dual = p_s / (kernel @ b)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+            <span class="n">dual</span> <span class="o">=</span><span class="p">(</span> <span class="n">p_s</span> <span class="o">/</span> <span class="p">(</span><span class="n">kernel</span> <span class="o">@</span> <span class="n">b</span><span class="p">)</span> <span class="p">)</span><span class="o">**</span><span class="n">f</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="p">(</span> <span class="n">p_t</span> <span class="o">/</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">t</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span> <span class="o">@</span> <span class="n">dual</span><span class="p">)</span> <span class="p">)</span><span class="o">**</span><span class="n">f</span>
+        <span class="n">tran</span> <span class="o">=</span> <span class="p">(</span><span class="n">dual</span> <span class="o">@</span> <span class="n">torch</span><span class="o">.</span><span class="n">t</span><span class="p">(</span><span class="n">b</span><span class="p">))</span> <span class="o">*</span> <span class="n">kernel</span>
+    <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">tran</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">tran</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">ns</span><span class="p">,</span> <span class="n">nt</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ns</span> <span class="o">*</span> <span class="n">nt</span><span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># pho = tran.mean()</span>
+    <span class="c1"># h_func = 1 - 0.5 * ( 1 + torch.sign(pho - tran) )</span>
+    <span class="c1"># hat_tran = tran * h_func</span>
+    <span class="c1"># d_fgw1 = (cost_pp * hat_tran.detach().data).sum()</span>
+    <span class="c1"># d_fgw2 = ((tran.detach().data - hat_tran.detach().data) * torch.log(1 + torch.exp(-cost_pp))).sum()</span>
+    <span class="c1"># d_fgw = d_fgw1 + d_fgw2</span>
+
+    <span class="n">d_fgw</span> <span class="o">=</span> <span class="p">(</span><span class="n">cost_pp</span> <span class="o">*</span> <span class="n">tran</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">d_fgw</span><span class="p">,</span> <span class="n">tran</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kai Cao.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

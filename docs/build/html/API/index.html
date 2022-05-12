@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API and modules &mdash; uniPort 1.0.5 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="uniport.Run" href="uniport.Run.html" />
+    <link rel="prev" title="Predict scRNA-seq through MERFISH data" href="../examples/MERFISH/MERFISH_predict.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> uniPort
+          </a>
+              <div class="version">
+                1.0.5
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API and modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="uniport.Run.html">uniport.Run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.Get_label_Prior.html">uniport.Get_label_Prior</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.label_reweight.html">uniport.label_reweight</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.load_file.html">uniport.load_file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.filter_data.html">uniport.filter_data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.batch_scale.html">uniport.batch_scale</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.data_loader.BatchSampler.html">uniport.data_loader.BatchSampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.data_loader.BatchSampler_balance.html">uniport.data_loader.BatchSampler_balance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.data_loader.SingleCellDataset.html">uniport.data_loader.SingleCellDataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.data_loader.SingleCellDataset_vertical.html">uniport.data_loader.SingleCellDataset_vertical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.data_loader.load_data.html">uniport.data_loader.load_data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.vae.VAE.html">uniport.model.vae.VAE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.layer.DSBatchNorm.html">uniport.model.layer.DSBatchNorm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.layer.Block.html">uniport.model.layer.Block</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.layer.NN.html">uniport.model.layer.NN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.layer.Encoder.html">uniport.model.layer.Encoder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.layer.Decoder.html">uniport.model.layer.Decoder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.loss.kl_div.html">uniport.model.loss.kl_div</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.loss.distance_matrix.html">uniport.model.loss.distance_matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.loss.distance_gmm.html">uniport.model.loss.distance_gmm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.loss.unbalanced_ot.html">uniport.model.loss.unbalanced_ot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.utils.onehot.html">uniport.model.utils.onehot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.model.utils.EarlyStopping.html">uniport.model.utils.EarlyStopping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.metrics.batch_entropy_mixing_score.html">uniport.metrics.batch_entropy_mixing_score</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.metrics.silhouette.html">uniport.metrics.silhouette</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.metrics.label_transfer.html">uniport.metrics.label_transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="uniport.logger.create_logger.html">uniport.logger.create_logger</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">uniPort</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>API and modules</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/API/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<span class="target" id="module-uniport"></span><section id="api-and-modules">
+<h1>API and modules<a class="headerlink" href="#api-and-modules" title="Permalink to this headline"></a></h1>
+<section id="module-0">
+<span id="function"></span><h2>Function<a class="headerlink" href="#module-0" title="Permalink to this headline"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.Run.html#uniport.Run" title="uniport.Run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Run</span></code></a>([adatas, adata_cm, mode, lambda_s, ...])</p></td>
+<td><p>Run data integration</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.Get_label_Prior.html#uniport.Get_label_Prior" title="uniport.Get_label_Prior"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Get_label_Prior</span></code></a>(alpha, celltype1, celltype2)</p></td>
+<td><p>Create a prior correspondence matrix according to cell labels</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.label_reweight.html#uniport.label_reweight" title="uniport.label_reweight"><code class="xref py py-obj docutils literal notranslate"><span class="pre">label_reweight</span></code></a>(celltype)</p></td>
+<td><p>Reweight labels to make all cell types share the same total weight</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.load_file.html#uniport.load_file" title="uniport.load_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_file</span></code></a>(path)</p></td>
+<td><p>Load single cell dataset from file</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.filter_data.html#uniport.filter_data" title="uniport.filter_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">filter_data</span></code></a>(adata[, min_features, ...])</p></td>
+<td><p>Filter cells and genes</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.batch_scale.html#uniport.batch_scale" title="uniport.batch_scale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_scale</span></code></a>(adata[, chunk_size])</p></td>
+<td><p>Batch-specific scale data</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-uniport.data_loader">
+<span id="dataloader"></span><h2>DataLoader<a class="headerlink" href="#module-uniport.data_loader" title="Permalink to this headline"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.data_loader.BatchSampler.html#uniport.data_loader.BatchSampler" title="uniport.data_loader.BatchSampler"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_loader.BatchSampler</span></code></a>(batch_size, batch_id)</p></td>
+<td><p>Batch-specific Sampler sampled data of each batch is from the same dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.data_loader.BatchSampler_balance.html#uniport.data_loader.BatchSampler_balance" title="uniport.data_loader.BatchSampler_balance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_loader.BatchSampler_balance</span></code></a>(batch_size, ...)</p></td>
+<td><p>Balanced batch-specific Sampler</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.data_loader.SingleCellDataset.html#uniport.data_loader.SingleCellDataset" title="uniport.data_loader.SingleCellDataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_loader.SingleCellDataset</span></code></a>(data, batch)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.data_loader.SingleCellDataset_vertical.html#uniport.data_loader.SingleCellDataset_vertical" title="uniport.data_loader.SingleCellDataset_vertical"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_loader.SingleCellDataset_vertical</span></code></a>(adatas)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.data_loader.load_data.html#uniport.data_loader.load_data" title="uniport.data_loader.load_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_loader.load_data</span></code></a>(adatas[, mode, ...])</p></td>
+<td><p>Load data for training.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-uniport.Model">
+<span id="model"></span><h2>Model<a class="headerlink" href="#module-uniport.Model" title="Permalink to this headline"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.vae.VAE.html#uniport.model.vae.VAE" title="uniport.model.vae.VAE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.vae.VAE</span></code></a>(enc, dec, ref_id, n_domain, mode)</p></td>
+<td><p>Variational Autoencoder framework</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.layer.DSBatchNorm.html#uniport.model.layer.DSBatchNorm" title="uniport.model.layer.DSBatchNorm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.layer.DSBatchNorm</span></code></a>(num_features, n_domain)</p></td>
+<td><p>Domain-specific Batch Normalization</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.layer.Block.html#uniport.model.layer.Block" title="uniport.model.layer.Block"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.layer.Block</span></code></a>(input_dim, output_dim[, ...])</p></td>
+<td><p>Basic block consist of:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.layer.NN.html#uniport.model.layer.NN" title="uniport.model.layer.NN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.layer.NN</span></code></a>(input_dim, cfg)</p></td>
+<td><p>Neural network consist of multi Blocks</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.layer.Encoder.html#uniport.model.layer.Encoder" title="uniport.model.layer.Encoder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.layer.Encoder</span></code></a>(input_dim, cfg, mode)</p></td>
+<td><p>VAE Encoder</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.layer.Decoder.html#uniport.model.layer.Decoder" title="uniport.model.layer.Decoder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.layer.Decoder</span></code></a>(z_dim, cfg)</p></td>
+<td><p>VAE Decoder</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.loss.kl_div.html#uniport.model.loss.kl_div" title="uniport.model.loss.kl_div"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.loss.kl_div</span></code></a>(mu, var[, weight])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.loss.distance_matrix.html#uniport.model.loss.distance_matrix" title="uniport.model.loss.distance_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.loss.distance_matrix</span></code></a>(pts_src, pts_dst)</p></td>
+<td><p>Returns the matrix of ||x_i-y_j||_p^p.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.loss.distance_gmm.html#uniport.model.loss.distance_gmm" title="uniport.model.loss.distance_gmm"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.loss.distance_gmm</span></code></a>(mu_src, mu_dst, ...)</p></td>
+<td><p>Calculate a Wasserstein distance matrix between the gmm distributions with diagonal variances</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.loss.unbalanced_ot.html#uniport.model.loss.unbalanced_ot" title="uniport.model.loss.unbalanced_ot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.loss.unbalanced_ot</span></code></a>(tran, mu1, var1, ...)</p></td>
+<td><p>Calculate a unbalanced optimal transport matrix between mini batches.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.model.utils.onehot.html#uniport.model.utils.onehot" title="uniport.model.utils.onehot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.utils.onehot</span></code></a>(y, n)</p></td>
+<td><p>Make the input tensor one hot tensors</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.model.utils.EarlyStopping.html#uniport.model.utils.EarlyStopping" title="uniport.model.utils.EarlyStopping"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model.utils.EarlyStopping</span></code></a>([patience, ...])</p></td>
+<td><p>Early stops the training if loss doesn't improve after a given patience.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-uniport.metrics">
+<span id="evaluation"></span><h2>Evaluation<a class="headerlink" href="#module-uniport.metrics" title="Permalink to this headline"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.metrics.batch_entropy_mixing_score.html#uniport.metrics.batch_entropy_mixing_score" title="uniport.metrics.batch_entropy_mixing_score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">metrics.batch_entropy_mixing_score</span></code></a>(data, batches)</p></td>
+<td><p>Calculate batch entropy mixing score</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="uniport.metrics.silhouette.html#uniport.metrics.silhouette" title="uniport.metrics.silhouette"><code class="xref py py-obj docutils literal notranslate"><span class="pre">metrics.silhouette</span></code></a>(X, cell_type[, metric, scale])</p></td>
+<td><p>Wrapper for sklearn silhouette function values range from [-1, 1] with</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.metrics.label_transfer.html#uniport.metrics.label_transfer" title="uniport.metrics.label_transfer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">metrics.label_transfer</span></code></a>(ref, query[, rep, label])</p></td>
+<td><p>Label transfer</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-uniport.logger">
+<span id="logger"></span><h2>Logger<a class="headerlink" href="#module-uniport.logger" title="Permalink to this headline"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="uniport.logger.create_logger.html#uniport.logger.create_logger" title="uniport.logger.create_logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">logger.create_logger</span></code></a>([name, ch, fh, levelname])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../examples/MERFISH/MERFISH_predict.html" class="btn btn-neutral float-left" title="Predict scRNA-seq through MERFISH data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="uniport.Run.html" class="btn btn-neutral float-right" title="uniport.Run" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kai Cao.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

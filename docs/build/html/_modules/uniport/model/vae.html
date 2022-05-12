@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>uniport.model.vae &mdash; uniPort 1.0.5 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/clipboard.min.js"></script>
+        <script src="../../../_static/copybutton.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> uniPort
+          </a>
+              <div class="version">
+                1.0.5
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../API/index.html">API and modules</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">uniPort</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>uniport.model.vae</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for uniport.model.vae</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Author: Kai Cao</span>
+<span class="sd">Modified from SCALEX</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">.layer</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.loss</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="VAE"><a class="viewcode-back" href="../../../API/uniport.model.vae.VAE.html#uniport.model.vae.VAE">[docs]</a><span class="k">class</span> <span class="nc">VAE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Variational Autoencoder framework</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="VAE.__init__"><a class="viewcode-back" href="../../../API/uniport.model.vae.VAE.html#uniport.model.vae.VAE.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enc</span><span class="p">,</span> <span class="n">dec</span><span class="p">,</span> <span class="n">ref_id</span><span class="p">,</span> <span class="n">n_domain</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        enc</span>
+<span class="sd">            Encoder structure config</span>
+<span class="sd">        dec</span>
+<span class="sd">            Decoder structure config</span>
+<span class="sd">        ref_id</span>
+<span class="sd">            ID of reference dataset</span>
+<span class="sd">        n_domain</span>
+<span class="sd">            The number of different domains</span>
+<span class="sd">        mode</span>
+<span class="sd">            Choose from [&#39;h&#39;, &#39;v&#39;, &#39;d&#39;]</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+
+        <span class="n">x_dim</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dec</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">x_dim</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">dec</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_dim</span> <span class="o">=</span> <span class="n">enc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">x_dim</span><span class="p">,</span> <span class="n">enc</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z_dim</span><span class="p">,</span> <span class="n">dec</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span> <span class="o">=</span> <span class="n">n_domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span> <span class="o">=</span> <span class="n">ref_id</span></div>
+  
+    <span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load trained model parameters dictionary.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path</span>
+<span class="sd">            file path that stores the model parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pretrained_dict</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="k">lambda</span> <span class="n">storage</span><span class="p">,</span> <span class="n">loc</span><span class="p">:</span> <span class="n">storage</span><span class="p">)</span>                            
+        <span class="n">model_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+        <span class="n">pretrained_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pretrained_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">model_dict</span><span class="p">}</span>
+        <span class="n">model_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pretrained_dict</span><span class="p">)</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">model_dict</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">encodeBatch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> 
+            <span class="n">dataloader</span><span class="p">,</span> 
+            <span class="n">num_gene</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;h&#39;</span><span class="p">,</span>  
+            <span class="n">out</span><span class="o">=</span><span class="s1">&#39;latent&#39;</span><span class="p">,</span> 
+            <span class="n">batch_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">pred_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">,</span> 
+            <span class="nb">eval</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">):</span>
+        <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inference</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloader</span>
+<span class="sd">            An iterable over the given dataset for inference.</span>
+<span class="sd">        num_gene</span>
+<span class="sd">            List of number of genes in different datasets. </span>
+<span class="sd">        mode</span>
+<span class="sd">            Choose from [&#39;h&#39;, &#39;v&#39;, &#39;d&#39;]</span>
+<span class="sd">            If &#39;h&#39;, integrate data with common genes</span>
+<span class="sd">            If &#39;v&#39;, integrate data profiled from the same cells</span>
+<span class="sd">            If &#39;d&#39;, inetrgate data without common genes</span>
+<span class="sd">            Default: &#39;h&#39;.</span>
+<span class="sd">        out</span>
+<span class="sd">            Output of uniPort. Choose from [&#39;latent&#39;, &#39;project&#39;, &#39;predict&#39;]. </span>
+<span class="sd">            If out=&#39;latent&#39;, train the network and output cell embeddings. </span>
+<span class="sd">            If out=&#39;project&#39;, project data into the latent space and output cell embeddings. </span>
+<span class="sd">            If out=&#39;predict&#39;, project data into the latent space and output cell embeddings through a specified decoder. </span>
+<span class="sd">            Default: &#39;latent&#39;.</span>
+<span class="sd">        batch_id</span>
+<span class="sd">            Choose which encoder to project data when mode=&#39;d&#39;. Default: 0.</span>
+<span class="sd">        pred_id</span>
+<span class="sd">            Choose which decoder to reconstruct data when out=&#39;predict&#39;.</span>
+<span class="sd">        device</span>
+<span class="sd">            &#39;cuda&#39; or &#39;cpu&#39; for . Default: &#39;cuda&#39;.</span>
+<span class="sd">        eval</span>
+<span class="sd">            If True, set the model to evaluation mode. If False, set the model to train mode. Default: False.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        output</span>
+<span class="sd">            Cell embeddings (if out=&#39;latent&#39; or &#39;project&#39;) or Predicted data (if out=&#39;predict&#39;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">eval</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+
+        <span class="c1"># indices = np.zeros(dataloader.dataset.shape[0])</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="o">==</span> <span class="s1">&#39;latent&#39;</span> <span class="ow">or</span> <span class="n">out</span> <span class="o">==</span> <span class="s1">&#39;project&#39;</span><span class="p">:</span>
+            <span class="c1"># output = np.zeros((dataloader.dataset.shape[0], self.z_dim))</span>
+
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;v&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span><span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="n">batch_id</span><span class="p">]]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">loc</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="n">batch_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">batch_id</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># z, mu, var</span>
+                    <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dataloader</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_dim</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x_c</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">]]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x_c</span><span class="p">,</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">output</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+                    <span class="c1"># output.append(z.detach().cpu())</span>
+                <span class="c1"># output = torch.cat(output).numpy()</span>
+
+        <span class="k">elif</span> <span class="n">out</span> <span class="o">==</span> <span class="s1">&#39;predict&#39;</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;v&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">pred_id</span><span class="p">)</span>
+                    <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">recon</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span><span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="n">batch_id</span><span class="p">]]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">loc</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="n">batch_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">batch_id</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># z, mu, var</span>
+                    <span class="n">recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">pred_id</span><span class="p">)</span>
+                    <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">recon</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">dataloader</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">num_gene</span><span class="p">[</span><span class="n">pred_id</span><span class="p">]))</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">idx</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+                    <span class="n">x_c</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">]]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x_c</span><span class="p">,</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">pred_id</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">output</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">recon</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> 
+            <span class="n">dataloader</span><span class="p">,</span> 
+            <span class="n">tran</span><span class="p">,</span>
+            <span class="n">num_cell</span><span class="p">,</span>
+            <span class="n">num_gene</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;h&#39;</span><span class="p">,</span>
+            <span class="n">loss_type</span><span class="o">=</span><span class="s1">&#39;BCE&#39;</span><span class="p">,</span>
+            <span class="n">label_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">Prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">save_OT</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">use_specific</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">lambda_s</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+            <span class="n">lambda_kl</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+            <span class="n">labmda_recon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">lambda_ot</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">reg</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+            <span class="n">reg_m</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">lr</span><span class="o">=</span><span class="mf">2e-4</span><span class="p">,</span>
+            <span class="n">max_iteration</span><span class="o">=</span><span class="mi">30000</span><span class="p">,</span>
+            <span class="n">early_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span>  
+            <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        train VAE</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataloader</span>
+<span class="sd">            An iterable over the given dataset for training.</span>
+<span class="sd">        tran</span>
+<span class="sd">            A global OT plan. tran={} if save_OT=False in function.py.</span>
+<span class="sd">        num_cell</span>
+<span class="sd">            List of number of cells in different datasets. </span>
+<span class="sd">        num_gene</span>
+<span class="sd">            List of number of genes in different datasets. </span>
+<span class="sd">        mode</span>
+<span class="sd">            Choose from [&#39;h&#39;, &#39;v&#39;, &#39;d&#39;]</span>
+<span class="sd">            If &#39;h&#39;, integrate data with common genes</span>
+<span class="sd">            If &#39;v&#39;, integrate data profiled from the same cells</span>
+<span class="sd">            If &#39;d&#39;, inetrgate data without common genes</span>
+<span class="sd">            Default: &#39;h&#39;</span>
+<span class="sd">        loss_type</span>
+<span class="sd">            type of loss. Choose between [&#39;BCE&#39;, &#39;MSE&#39;m &#39;L1&#39;]. Default: &#39;BCE&#39;</span>
+<span class="sd">        label_weight</span>
+<span class="sd">            Prior-guided weighted vectors. Default: None</span>
+<span class="sd">        Prior</span>
+<span class="sd">            Prior correspondence matrix.</span>
+<span class="sd">        save_OT</span>
+<span class="sd">            If True, output a global OT plan. Default: False</span>
+<span class="sd">        use_specific</span>
+<span class="sd">            If True, specific genes in each dataset will be considered. Default: True</span>
+<span class="sd">        lambda_s</span>
+<span class="sd">            Balanced parameter for specific genes. Default: 0.5</span>
+<span class="sd">        lambda_kl: </span>
+<span class="sd">            Balanced parameter for KL divergence. Default: 0.5</span>
+<span class="sd">        lambda_recon:</span>
+<span class="sd">            Balanced parameter for reconstruction. Default: 1.0</span>
+<span class="sd">        lambda_ot:</span>
+<span class="sd">            Balanced parameter for OT. Default: 1.0</span>
+<span class="sd">        reg:</span>
+<span class="sd">            Entropy regularization parameter in OT. Default: 0.1</span>
+<span class="sd">        reg_m:</span>
+<span class="sd">            Unbalanced OT parameter. Larger values means more balanced OT. Default: 1.0</span>
+<span class="sd">        lr</span>
+<span class="sd">            Learning rate. Default: 2e-4</span>
+<span class="sd">        max_iteration</span>
+<span class="sd">            Max iterations for training. Training one batch_size samples is one iteration. Default: 60000</span>
+<span class="sd">        early_stopping</span>
+<span class="sd">            EarlyStopping class (definite in utils.py) for stoping the training if loss doesn&#39;t improve after a given patience. Default: None</span>
+<span class="sd">        device</span>
+<span class="sd">            &#39;cuda&#39; or &#39;cpu&#39; for training. Default: &#39;cuda&#39;</span>
+<span class="sd">        verbose</span>
+<span class="sd">            Verbosity, True or False. Default: False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">)</span>
+
+        <span class="n">n_epoch</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">max_iteration</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">dataloader</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="n">loss_type</span> <span class="o">==</span> <span class="s1">&#39;BCE&#39;</span><span class="p">:</span>
+            <span class="n">loss_func</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">BCELoss</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">loss_type</span> <span class="o">==</span> <span class="s1">&#39;MSE&#39;</span><span class="p">:</span>
+            <span class="n">loss_func</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">loss_type</span> <span class="o">==</span> <span class="s1">&#39;L1&#39;</span><span class="p">:</span>
+            <span class="n">loss_func</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">L1Loss</span><span class="p">()</span>
+        
+        <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_epoch</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="n">n_epoch</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Epochs&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tq</span><span class="p">:</span>       
+            <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="n">tq</span><span class="p">:</span>
+
+                <span class="n">tk0</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dataloader</span><span class="p">),</span> <span class="n">leave</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Iterations&#39;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">(</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">))</span>
+                <span class="n">epoch_loss</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;v&#39;</span><span class="p">:</span>
+
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tk0</span><span class="p">:</span>
+                        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">x_list</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="n">num_sum</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="n">num_sum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_gene</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_sum</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">):</span>
+                            <span class="n">num_sum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_sum</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">num_gene</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                            <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">num_sum</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]:</span><span class="n">num_sum</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+
+                        <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                        <span class="n">kl_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">z</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+                        <span class="n">kl_loss</span> <span class="o">+=</span> <span class="n">kl_div</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> 
+                        <span class="n">recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                        <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon</span><span class="p">,</span> <span class="n">x_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mi">2000</span>
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">):</span>
+
+                            <span class="n">recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+                            <span class="n">recon_loss</span> <span class="o">+=</span> <span class="n">lambda_s</span> <span class="o">*</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon</span><span class="p">,</span> <span class="n">x_list</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">*</span> <span class="mi">2000</span>   <span class="c1">## TO DO</span>
+                    
+                        <span class="n">loss</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;recon_loss&#39;</span><span class="p">:</span><span class="n">labmda_recon</span><span class="o">*</span><span class="n">recon_loss</span><span class="p">,</span> <span class="s1">&#39;kl_loss&#39;</span><span class="p">:</span><span class="n">lambda_kl</span><span class="o">*</span><span class="n">kl_loss</span><span class="p">}</span> 
+
+                        <span class="n">optim</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+                        <span class="nb">sum</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                        <span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+                        
+                        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="n">epoch_loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="n">loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                            
+                        <span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                        <span class="n">tk0</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+                    
+
+                    <span class="n">epoch_loss</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span><span class="o">/</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                    <span class="n">epoch_info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                    <span class="n">tq</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">epoch_info</span><span class="p">)</span> 
+
+
+                <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;d&#39;</span><span class="p">:</span>
+
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">idx</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tk0</span><span class="p">:</span>
+
+                        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>    
+
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+                        <span class="n">mu_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">var_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                               
+                        <span class="n">loc_ref</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">idx_ref</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">loc_ref</span><span class="p">]</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">num_cell</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">])</span>
+
+                        <span class="n">loc_query</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">idx_query</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">tran_batch</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">Prior_batch</span> <span class="o">=</span> <span class="kc">None</span>
+
+                        <span class="n">query_id</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">))</span>
+                        <span class="n">query_id</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">)</span>
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">query_id</span><span class="p">:</span>
+
+                            <span class="n">loc_query</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="n">j</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">loc_query</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">num_cell</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">j</span><span class="p">])</span>
+
+                            <span class="k">if</span> <span class="n">save_OT</span><span class="p">:</span>
+                                <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">tran</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span><span class="n">idx_ref</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+                            <span class="k">if</span> <span class="n">Prior</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                                <span class="n">Prior_batch</span> <span class="o">=</span> <span class="n">Prior</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span><span class="n">idx_ref</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                        <span class="n">kl_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                        <span class="n">ot_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">loc</span> <span class="o">=</span> <span class="n">loc_query</span>
+                        <span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">loc_ref</span>
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">):</span>
+
+                            <span class="n">z_j</span><span class="p">,</span> <span class="n">mu_j</span><span class="p">,</span> <span class="n">var_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">j</span><span class="p">)</span>
+                            <span class="n">mu_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_j</span>
+                            <span class="n">var_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">var_j</span>
+                            <span class="n">recon_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z_j</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+
+                            <span class="n">recon_loss</span> <span class="o">+=</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon_j</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span> <span class="o">*</span> <span class="n">x</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">## TO DO</span>
+                            <span class="n">kl_loss</span> <span class="o">+=</span> <span class="n">kl_div</span><span class="p">(</span><span class="n">mu_j</span><span class="p">,</span> <span class="n">var_j</span><span class="p">)</span> 
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">query_id</span><span class="p">:</span>
+
+                            <span class="n">ot_loss_tmp</span><span class="p">,</span> <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">unbalanced_ot</span><span class="p">(</span><span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">mu_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">var_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="n">mu_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">var_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">Couple</span><span class="o">=</span><span class="n">Prior_batch</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+                            <span class="k">if</span> <span class="n">save_OT</span><span class="p">:</span>
+                                <span class="n">t0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]),</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">))</span>
+                                <span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]),</span> <span class="mi">1</span><span class="p">))</span>
+                                <span class="n">tran</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">t0</span><span class="p">,</span><span class="n">t1</span><span class="p">]</span> <span class="o">=</span> <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+                            <span class="n">ot_loss</span> <span class="o">+=</span> <span class="n">ot_loss_tmp</span>
+
+                        <span class="n">loss</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;recon_loss&#39;</span><span class="p">:</span><span class="n">labmda_recon</span><span class="o">*</span><span class="n">recon_loss</span><span class="p">,</span> <span class="s1">&#39;kl_loss&#39;</span><span class="p">:</span><span class="n">lambda_kl</span><span class="o">*</span><span class="n">kl_loss</span><span class="p">,</span> <span class="s1">&#39;ot_loss&#39;</span><span class="p">:</span><span class="n">lambda_ot</span><span class="o">*</span><span class="n">ot_loss</span><span class="p">}</span> 
+
+                        <span class="n">optim</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+                        <span class="nb">sum</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                        <span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+          
+                        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="n">epoch_loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="n">loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                            
+                        <span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                        <span class="n">tk0</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+
+                    <span class="n">epoch_loss</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span><span class="o">/</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                    <span class="n">epoch_info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                    <span class="n">tq</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">epoch_info</span><span class="p">)</span> 
+
+
+                <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;h&#39;</span><span class="p">:</span>
+
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tk0</span><span class="p">:</span>
+
+                        <span class="n">x_c</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">]]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y</span><span class="o">.</span><span class="n">long</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>  
+                                                    
+                        <span class="n">loc_ref</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">idx_ref</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">loc_ref</span><span class="p">]</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">num_cell</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">])</span>
+
+                        <span class="n">loc_query</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">idx_query</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">tran_batch</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">Prior_batch</span> <span class="o">=</span> <span class="kc">None</span>
+
+                        <span class="n">query_id</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">))</span>
+                        <span class="n">query_id</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc_ref</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">query_id</span><span class="p">:</span>
+
+                                <span class="n">loc_query</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span><span class="o">==</span><span class="n">j</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                                <span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="n">loc_query</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">num_cell</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">j</span><span class="p">])</span>
+
+                                <span class="k">if</span> <span class="n">save_OT</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                                        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                                            <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">tran</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]][</span><span class="n">idx_ref</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                                        <span class="k">else</span><span class="p">:</span>
+                                            <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">tran</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span><span class="n">idx_ref</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+                                <span class="k">if</span> <span class="n">Prior</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                                    <span class="n">Prior_batch</span> <span class="o">=</span> <span class="n">Prior</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span><span class="n">idx_ref</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">ot_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                        <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                        <span class="n">kl_loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                        <span class="n">loc</span> <span class="o">=</span> <span class="n">loc_query</span>
+                        <span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">loc_ref</span>
+                        <span class="n">idx</span> <span class="o">=</span> <span class="n">idx_query</span>
+                        <span class="n">idx</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx_ref</span>
+
+                        <span class="n">z</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x_c</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                        <span class="n">recon_x_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>        
+   
+                        <span class="k">if</span> <span class="n">label_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon_x_c</span><span class="p">,</span> <span class="n">x_c</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2000</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">label_weight</span><span class="p">):</span>
+
+                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                                        <span class="n">recon_loss</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span> <span class="o">*</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon_x_c</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">x_c</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span> <span class="o">*</span> \
+                                        <span class="mi">2000</span>
+                                        <span class="c1"># kl_loss += kl_div(mu[loc[j]], var[loc[j]])                               </span>
+                                    <span class="k">else</span><span class="p">:</span>
+                                        <span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                                        <span class="n">recon_loss</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span> <span class="o">*</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">recon_x_c</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">x_c</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">[</span><span class="n">idx</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span> <span class="o">*</span> \
+                                        <span class="mi">2000</span>
+                                        <span class="c1"># kl_loss += kl_div(mu[loc[j]], var[loc[j]], weight[idx[j]])</span>
+
+                        <span class="n">kl_loss</span> <span class="o">=</span> <span class="n">kl_div</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> 
+                        <span class="k">if</span> <span class="n">use_specific</span><span class="p">:</span>
+
+                            <span class="n">x_s</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">num_gene</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">]:]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">):</span>
+                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                                    <span class="n">recon_x_s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]],</span> <span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                                    <span class="n">recon_loss</span> <span class="o">+=</span> <span class="n">lambda_s</span> <span class="o">*</span> <span class="n">loss_func</span><span class="p">(</span><span class="n">recon_x_s</span><span class="p">,</span> <span class="n">x_s</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]][:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">num_gene</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span> <span class="o">*</span> <span class="mi">2000</span>
+                        
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">])</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+                            
+                            <span class="n">mu_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                            <span class="n">var_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_domain</span><span class="p">):</span>
+                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                                    <span class="n">mu_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
+                                    <span class="n">var_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">var</span><span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
+
+                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">query_id</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+
+                                    <span class="k">if</span> <span class="n">label_weight</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+                                        <span class="n">ot_loss_tmp</span><span class="p">,</span> <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">unbalanced_ot</span><span class="p">(</span>
+                                            <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                                            <span class="n">mu_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> 
+                                            <span class="n">var_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> 
+                                            <span class="n">mu_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> 
+                                            <span class="n">var_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> 
+                                            <span class="n">reg</span><span class="o">=</span><span class="n">reg</span><span class="p">,</span>
+                                            <span class="n">reg_m</span><span class="o">=</span><span class="n">reg_m</span><span class="p">,</span>
+                                            <span class="n">idx_q</span><span class="o">=</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                                            <span class="n">idx_r</span><span class="o">=</span><span class="n">idx_ref</span><span class="p">,</span>
+                                            <span class="n">Couple</span><span class="o">=</span><span class="n">Prior_batch</span><span class="p">,</span> 
+                                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                                        <span class="p">)</span>
+
+                                    <span class="k">else</span><span class="p">:</span>
+
+                                        <span class="n">ot_loss_tmp</span><span class="p">,</span> <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">unbalanced_ot</span><span class="p">(</span>
+                                            <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                                            <span class="n">mu_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> 
+                                            <span class="n">var_dict</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> 
+                                            <span class="n">mu_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> 
+                                            <span class="n">var_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> 
+                                            <span class="n">reg</span><span class="o">=</span><span class="n">reg</span><span class="p">,</span>
+                                            <span class="n">reg_m</span><span class="o">=</span><span class="n">reg_m</span><span class="p">,</span>
+                                            <span class="n">idx_q</span><span class="o">=</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                                            <span class="n">idx_r</span><span class="o">=</span><span class="n">idx_ref</span><span class="p">,</span>
+                                            <span class="n">Couple</span><span class="o">=</span><span class="n">Prior_batch</span><span class="p">,</span> 
+                                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                                            <span class="n">query_weight</span><span class="o">=</span><span class="n">label_weight</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                                            <span class="n">ref_weight</span><span class="o">=</span><span class="n">label_weight</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ref_id</span><span class="p">],</span>
+                                        <span class="p">)</span>
+
+                                    <span class="k">if</span> <span class="n">save_OT</span><span class="p">:</span>
+                                        <span class="n">t0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]),</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">))</span>
+                                        <span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">idx_ref</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_query</span><span class="p">[</span><span class="n">j</span><span class="p">]),</span> <span class="mi">1</span><span class="p">))</span>
+                                        <span class="n">tran</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">t0</span><span class="p">,</span><span class="n">t1</span><span class="p">]</span> <span class="o">=</span> <span class="n">tran_batch</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+                                    <span class="n">ot_loss</span> <span class="o">+=</span> <span class="n">ot_loss_tmp</span>
+   
+                        <span class="n">loss</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;recloss&#39;</span><span class="p">:</span><span class="n">labmda_recon</span><span class="o">*</span><span class="n">recon_loss</span><span class="p">,</span> <span class="s1">&#39;klloss&#39;</span><span class="p">:</span><span class="n">lambda_kl</span><span class="o">*</span><span class="n">kl_loss</span><span class="p">,</span> <span class="s1">&#39;otloss&#39;</span><span class="p">:</span><span class="n">lambda_ot</span><span class="o">*</span><span class="n">ot_loss</span><span class="p">}</span> 
+                        
+                        <span class="n">optim</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+                        <span class="nb">sum</span><span class="p">(</span><span class="n">loss</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                        <span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+                        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="n">epoch_loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="n">loss</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+                        <span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                        <span class="n">tk0</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+
+                    
+                    <span class="n">epoch_loss</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span><span class="n">v</span><span class="o">/</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+                    <span class="n">epoch_info</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">=</span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">epoch_loss</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+                    <span class="n">tq</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">epoch_info</span><span class="p">)</span> 
+                        
+                    <span class="n">early_stopping</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">epoch_loss</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="bp">self</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">early_stopping</span><span class="o">.</span><span class="n">early_stop</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;EarlyStopping: run </span><span class="si">{}</span><span class="s1"> epoch&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+                        <span class="k">break</span>    </div>
+                                                      
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kai Cao.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
