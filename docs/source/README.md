@@ -35,7 +35,7 @@ pip3 install uniport
 + **lambda_recon**: balanced parameter for reconstruct term. Default: 1.0
 + **lambda_kl**: balanced parameter for KL divergence. Default: 0.5
 + **lambda_ot**: balanced parameter for OT. Default: 1.0
-+ **max_iteration**: max iterations for training. Training one batch_size samples is one iteration. Default: 30000
++ **iteration**: max iterations for training. Training one batch_size samples is one iteration. Default: 30000
 + **ref_id**: id of reference dataset. Default: The domain_id of last dataset
 + **save_OT**: if True, output a global OT plan. Need more memory. Default: False
 + **out**: output of uniPort. Choose from ['latent', 'project', 'predict']. If out=='latent', train the network and output cell embeddings. If out=='project', project data into the latent space and output cell embeddings. If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. Default: 'latent'

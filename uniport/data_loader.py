@@ -161,7 +161,7 @@ class SingleCellDataset_vertical(Dataset):
 
         return x, idx
     
-def load_data(adatas, mode='h', num_cell=None, max_gene=None, adata_cm=None, use_specific=False, domain_name='domain_id', batch_size=256, \
+def load_data(adatas, mode='h', use_rep=['X','X'], num_cell=None, max_gene=None, adata_cm=None, use_specific=False, domain_name='domain_id', batch_size=256, \
     drop_last=True, shuffle=True, num_workers=4):
 
     '''
@@ -173,6 +173,8 @@ def load_data(adatas, mode='h', num_cell=None, max_gene=None, adata_cm=None, use
         A list of AnnData matrice.
     mode
         training mode. Choose between ['h', 'd', 'v'].
+    use_rep
+        use '.X' or '.obsm'.
     num_cell
         numbers of cells of each adata in adatas.
     max_gene
@@ -204,7 +206,10 @@ def load_data(adatas, mode='h', num_cell=None, max_gene=None, adata_cm=None, use
 
         for i, adata in enumerate(adatas):
 
-            tmp = adata.X
+            if use_rep[i]=='X':
+                tmp = adata.X
+            else:
+                tmp = adata.obsm[use_rep[i]]
             if tmp.shape[1] < max_gene:
                 tmp =  scipy.sparse.hstack((tmp, scipy.sparse.coo_matrix(np.zeros((tmp.shape[0], max_gene-tmp.shape[1])))))
             if i == 0:
@@ -246,7 +251,7 @@ def load_data(adatas, mode='h', num_cell=None, max_gene=None, adata_cm=None, use
             if not issparse(adata_cm.X):
                 adata_cm.X = scipy.sparse.csr_matrix(adata_cm.X)
             x = adata_cm.X
-
+            
 
         scdata = SingleCellDataset(x, adata_cm.obs[domain_name].astype(int).tolist())
 

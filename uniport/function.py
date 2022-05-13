@@ -10,6 +10,7 @@ import os
 import scanpy as sc
 from anndata import AnnData
 import scipy
+import sklearn
 import pandas as pd
 from scipy.sparse import issparse
 
@@ -94,7 +95,47 @@ def load_file(path):
         adata.X = scipy.sparse.csr_matrix(adata.X)
 
     return adata
+
+def tfidf(X, n_components, binarize=True, random_state=0):
+    from sklearn.feature_extraction.text import TfidfTransformer
     
+    sc_count = np.copy(X)
+    if binarize:
+        sc_count = np.where(sc_count < 1, sc_count, 1)
+    
+    tfidf = TfidfTransformer(norm='l2', sublinear_tf=True)
+    normed_count = tfidf.fit_transform(sc_count)
+
+    lsi = sklearn.decomposition.TruncatedSVD(n_components=n_components, random_state=random_state)
+    lsi_r = lsi.fit_transform(normed_count)
+    
+    X_lsi = lsi_r[:,1:]
+
+    return X_lsi
+    
+def TFIDF_LSI(adata, n_comps=50, binarize=True, random_state=0):
+    '''
+    Computes LSI based on a TF-IDF transformation of the data from MultiMap. Putative dimensionality 
+    reduction for scATAC-seq data. Adds an ``.obsm['X_lsi']`` field to the object it was ran on. 
+    
+    Input
+    -----
+    adata : ``AnnData``
+        The object to run TFIDF + LSI on. Will use ``.X`` as the input data.
+    n_comps : ``int``
+        The number of components to generate. Default: 50
+    binarize : ``bool``
+        Whether to binarize the data prior to the computation. Often done during scATAC-seq 
+        processing. Default: True
+    random_state : ``int``
+        The seed to use for randon number generation. Default: 0
+    '''
+    
+    #this is just a very basic wrapper for the non-adata function
+    if scipy.sparse.issparse(adata.X):
+        adata.obsm['X_lsi'] = tfidf(adata.X.todense(), n_components=n_comps, binarize=binarize, random_state=random_state)
+    else:
+        adata.obsm['X_lsi'] = tfidf(adata.X, n_components=n_comps, binarize=binarize, random_state=random_state)
 
 def filter_data(
         adata: AnnData,
@@ -114,9 +155,6 @@ def filter_data(
     min_cells
         Filtered out genes that are detected in less than n cells. Default: 0.
         
-    Return
-    ------
-    AnnData
     """
     
 
@@ -126,9 +164,7 @@ def filter_data(
     if log: log.info('Filtering features')
     sc.pp.filter_genes(adata, min_cells=min_cells)
 
-    return adata
-
-def batch_scale(adata, chunk_size=CHUNK_SIZE):
+def batch_scale(adata, use_rep='X', chunk_size=CHUNK_SIZE):
     """
     Batch-specific scale data
     
@@ -136,34 +172,36 @@ def batch_scale(adata, chunk_size=CHUNK_SIZE):
     ----------
     adata
         AnnData
+    use_rep
+        use '.X' or '.obsm'
     chunk_size
         chunk large data into small chunks
     
-    Return
-    ------
-    AnnData
     """
     for b in adata.obs['source'].unique():
         idx = np.where(adata.obs['source']==b)[0]
-        scaler = MaxAbsScaler(copy=False).fit(adata.X[idx])
-        for i in range(len(idx)//chunk_size+1):
-            adata.X[idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.X[idx[i*chunk_size:(i+1)*chunk_size]])
+        if use_rep == 'X':
+            scaler = MaxAbsScaler(copy=False).fit(adata.X[idx])
+            for i in range(len(idx)//chunk_size+1):
+                adata.X[idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.X[idx[i*chunk_size:(i+1)*chunk_size]])
+        else:
+            scaler = MaxAbsScaler(copy=False).fit(adata.obsm[use_rep][idx])
+            for i in range(len(idx)//chunk_size+1):
+                adata.obsm[use_rep][idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.obsm[use_rep][idx[i*chunk_size:(i+1)*chunk_size]])
 
-    return adata
-
-def Get_label_Prior(alpha, celltype1, celltype2):
+def get_prior(celltype1, celltype2, alpha=2):
 
     """
     Create a prior correspondence matrix according to cell labels
     
     Parameters
     ----------
-    alpha
-        the confidence of label, ranges from (1, inf). Higher alpha means better confidence.
     celltype1
         cell labels of dataset X
     celltype2
         cell labels of dataset Y
+    alpha
+        the confidence of label, ranges from (1, inf). Higher alpha means better confidence. Default: 2.0
 
     Return
     ------
@@ -214,15 +252,16 @@ def label_reweight(celltype):
 # @profile
 def Run(
         adatas=None,     
-        adata_cm = None,   
+        adata_cm=None,   
         mode='h',
         lambda_s=0.5,
         lambda_recon=1.0,
         lambda_kl=0.5,
         lambda_ot=1.0,
-        max_iteration=30000,
+        iteration=30000,
         ref_id=None,    
         save_OT=False,
+        use_rep=['X', 'X'],
         out='latent',
         label_weight=None,
         reg=0.1,
@@ -231,12 +270,13 @@ def Run(
         lr=2e-4, 
         enc=None,
         gpu=0, 
-        Prior = None,
+        prior=None,
         loss_type='BCE',
         outdir='output/', 
         input_id=0,
         pred_id=1,
         seed=124, 
+        num_workers=4,
         batch_key='domain_id',
         source_name='source',
         rep_celltype='cell_type',
@@ -269,12 +309,18 @@ def Run(
         Balanced parameter for KL divergence. Default: 0.5
     lambda_ot:
         Balanced parameter for OT. Default: 1.0
-    max_iteration
+    iteration
         Max iterations for training. Training one batch_size samples is one iteration. Default: 30000
     ref_id
         Id of reference dataset. Default: None
     save_OT
         If True, output a global OT plan. Need more memory. Default: False
+    use_rep
+        Use '.X' or '.obsm'. For mode='d' only.
+        If use_rep=['X','X'], use 'adatas[0].X' and 'adatas[1].X' for integration.
+        If use_rep=['X','X_lsi'],  use 'adatas[0].X' and 'adatas[1].obsm['X_lsi']' for integration.
+        If use_rep=['X_pca', 'X_lsi'], use 'adatas[0].obsm['X_pca']' and 'adatas[1].obsm['X_lsi']' for integration.
+        Default: ['X','X']
     out
         Output of uniPort. Choose from ['latent', 'project', 'predict'].
         If out=='latent', train the network and output cell embeddings.
@@ -292,10 +338,10 @@ def Run(
     lr
         Learning rate. Default: 2e-4
     enc
-        structure of encoder
+        Structure of encoder
     gpu
         Index of GPU to use if GPU is available. Default: 0
-    Prior
+    prior
         Prior correspondence matrix. Default: None
     loss_type
         type of loss. 'BCE', 'MSE' or 'L1'. Default: 'BCE'
@@ -378,9 +424,14 @@ def Run(
     num_cell = []
     num_gene = []
 
-    for adata in adatas:
-        num_cell.append(adata.X.shape[0])
-        num_gene.append(adata.X.shape[1])
+    for i, adata in enumerate(adatas):
+        if use_rep[i]=='X':
+            num_cell.append(adata.X.shape[0])
+            num_gene.append(adata.X.shape[1])
+        else:
+            num_cell.append(adata.obsm[use_rep[i]].shape[0])
+            num_gene.append(adata.obsm[use_rep[i]].shape[1])
+
 
     # training
     if out == 'latent':
@@ -417,13 +468,15 @@ def Run(
 
         trainloader, testloader = load_data(
             adatas=adatas, 
+            mode=mode,
+            use_rep=use_rep,
             num_cell=num_cell,
             max_gene=max(num_gene), 
             adata_cm=adata_cm,
             use_specific=use_specific, 
             domain_name=batch_key,
-            batch_size=batch_size, 
-            mode=mode
+            batch_size=batch_size,
+            num_workers=4
         )
 
         early_stopping = EarlyStopping(patience=10, checkpoint_file=outdir+'/checkpoint/model.pt')
@@ -461,7 +514,7 @@ def Run(
             num_gene,
             mode=mode,
             label_weight=label_weight,
-            Prior=Prior,
+            Prior=prior,
             save_OT=save_OT,
             use_specific=use_specific,
             lambda_s=lambda_s,
@@ -471,7 +524,7 @@ def Run(
             reg=reg,
             reg_m=reg_m,
             lr=lr, 
-            max_iteration=max_iteration, 
+            max_iteration=iteration, 
             device=device, 
             early_stopping=early_stopping, 
             verbose=verbose,
