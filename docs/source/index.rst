@@ -3,9 +3,6 @@ Home
 
 Tutorials
 ---------
-
-.. image:: _static/uniPort.png
-   :alt: Overview
    
 .. image:: _static/net.png
    :alt: Overview
