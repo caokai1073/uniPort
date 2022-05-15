@@ -2,6 +2,7 @@
 [![PyPI version](https://badge.fury.io/py/uniport.svg)](https://badge.fury.io/py/POT)
 [![docs-badge](https://readthedocs.org/projects/uniport/badge/?version=latest)](https://uniport.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://pepy.tech/badge/uniport)](https://pepy.tech/project/uniport)
+[![Downloads](https://pepy.tech/badge/uniport/month)](https://pepy.tech/project/uniport)
 
 The original paper: 
 [a unified single-cell data integration framework with optimal transport](https://www.biorxiv.org/content/10.1101/2022.02.14.480323v1)
