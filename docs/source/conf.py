@@ -53,6 +53,7 @@ intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
 html_static_path = ['_static']
+html_logo = '_static/uniPort.png'
 
 # -- Options for HTML output
 
