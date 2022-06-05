@@ -19,7 +19,7 @@ Author's Homepage: [www.caokai.site](https://www.caokai.site)
 
 ## Installation
 
-The **uniport** package can be installed via pip:
+The **uniport** package can be installed via pip3:
 
 ```sh
 pip3 install uniport
