@@ -4,6 +4,7 @@ v1.1.1
 ------
 - add model_log parameter to *Run()* function. 
     + If model_log=True, show structures of encoder and decoders. Default: False.
+- fix bugs
 
 v1.1.0
 ------

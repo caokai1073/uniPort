@@ -46,6 +46,9 @@ pip3 install uniport
 + **save_OT**: if True, output a global OT plan. Need more memory. Default: False
 + **out**: output of uniPort. Choose from ['latent', 'project', 'predict']. If out=='latent', train the network and output cell embeddings. If out=='project', project data into the latent space and output cell embeddings. If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. Default: 'latent'
 
+## Data
++ ### Data before and after process are available in: [**uniPort source data link**](https://mailsucasaccn-my.sharepoint.com/:f:/g/personal/caokai17_mails_ucas_ac_cn/EkoQTcaAO3tNj0mbii1tobkBb6ePhQXGj-ne9nI9IW4eAw?e=yxeUiv)
+
 ## Example
 ```Python
 import uniport as up
@@ -57,17 +60,18 @@ adata2 = sc.read_h5ad('adata2.h5ad') # preprocessed data with data2 specific HVG
 adata_cm = sc.read_h5ad('adata_cm.h5ad') # preprocesssed data with common HVG
 
 # integration with both common and dataset-specific genes
+# latent representation are stored in adata.obs['latent']
 adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
 # save global optimal transport matrix
 adata, OT = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm, save_OT=True)
 # integration with only common genes
 adata = up.Run(adata_cm=adata_cm)
 
-# integration without common genes
+# integration without common genes, 
 adata = up.Run(adatas=[adata1, adata2], mode='d')
 
-# integration with paired datasets
-adata = up.Run(adatas=[adata1, adata2], mode='v')
+# integration with paired datasets, refine adata1 with adata2.
+adata1 = up.Run(adatas=[adata1, adata2], mode='v')
 ```
 
 ## Citation
