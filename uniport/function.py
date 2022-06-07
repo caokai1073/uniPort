@@ -280,6 +280,7 @@ def Run(
         batch_key='domain_id',
         source_name='source',
         rep_celltype='cell_type',
+        model_info=False,
         umap=False,
         verbose=False,
         assess=False,
@@ -361,6 +362,8 @@ def Run(
         Names of cell-type annotation in AnnData. Default: 'cell_type'   
     umap
         If True, perform UMAP for visualization. Default: False
+    model_info
+        If True, show structures of encoder and decoders.
     verbose
         Verbosity, True or False. Default: False
     assess
@@ -505,7 +508,8 @@ def Run(
         # init model
         model = VAE(enc, dec, ref_id=ref_id, n_domain=n_domain, mode=mode)
 
-        log.info('model\n'+model.__repr__())
+        if model_info:
+            log.info('model\n'+model.__repr__())
 
         model.fit(
             trainloader, 
