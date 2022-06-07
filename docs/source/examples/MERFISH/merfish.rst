@@ -4,8 +4,7 @@ Integrate MERFISH and scRNA
 
 .. toctree::
 
-   MERFISH_preprocess
-   MERFISH_integration
+   MERFISH_and_scRNA
    MERFISH_predict
 
 
