@@ -1,4 +1,4 @@
-<img src="docs/source/_static/uniPort.png" width="40%" height="40%">
+<img src="docs/source/_static/uniPort.jpg" width="40%" height="40%">
 
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://badge.fury.io/py/uniport.svg)](https://badge.fury.io/py/POT)
