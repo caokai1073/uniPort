@@ -4,6 +4,8 @@
 
 import inspect
 
+import sphinx_autodoc_typehints
+
 project = 'uniPort'
 copyright = u'2022, Kai Cao'
 author = 'Kai Cao'
@@ -18,6 +20,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'sphinx_markdown_tables',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
