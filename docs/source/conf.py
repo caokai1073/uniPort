@@ -3,7 +3,6 @@
 # -- Project information
 
 import inspect
-import uniport
 
 import sphinx_autodoc_typehints
 
@@ -11,8 +10,6 @@ project = 'uniPort'
 copyright = u'2022, Kai Cao'
 author = 'Kai Cao'
 
-release = uniport.__version__
-version = uniport.__version__
 
 # -- General configuration
 
