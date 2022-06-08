@@ -4,7 +4,6 @@
 
 import inspect
 
-import sphinx_autodoc_typehints
 
 project = 'uniPort'
 copyright = u'2022, Kai Cao'
