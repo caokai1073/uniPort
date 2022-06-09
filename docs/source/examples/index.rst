@@ -7,4 +7,5 @@ Examples
    MERFISH/merfish
    vertical_snare_cell_line
    diagonal_PBMC
+   PDAC_integration
 
