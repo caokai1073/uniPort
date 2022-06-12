@@ -31,6 +31,7 @@
       ~Block.get_parameter
       ~Block.get_submodule
       ~Block.half
+      ~Block.ipu
       ~Block.load_state_dict
       ~Block.modules
       ~Block.named_buffers
@@ -43,6 +44,7 @@
       ~Block.register_forward_hook
       ~Block.register_forward_pre_hook
       ~Block.register_full_backward_hook
+      ~Block.register_load_state_dict_post_hook
       ~Block.register_module
       ~Block.register_parameter
       ~Block.requires_grad_

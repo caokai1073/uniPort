@@ -31,6 +31,7 @@
       ~DSBatchNorm.get_parameter
       ~DSBatchNorm.get_submodule
       ~DSBatchNorm.half
+      ~DSBatchNorm.ipu
       ~DSBatchNorm.load_state_dict
       ~DSBatchNorm.modules
       ~DSBatchNorm.named_buffers
@@ -43,6 +44,7 @@
       ~DSBatchNorm.register_forward_hook
       ~DSBatchNorm.register_forward_pre_hook
       ~DSBatchNorm.register_full_backward_hook
+      ~DSBatchNorm.register_load_state_dict_post_hook
       ~DSBatchNorm.register_module
       ~DSBatchNorm.register_parameter
       ~DSBatchNorm.requires_grad_

@@ -31,6 +31,7 @@
       ~Decoder.get_parameter
       ~Decoder.get_submodule
       ~Decoder.half
+      ~Decoder.ipu
       ~Decoder.load_state_dict
       ~Decoder.modules
       ~Decoder.named_buffers
@@ -43,6 +44,7 @@
       ~Decoder.register_forward_hook
       ~Decoder.register_forward_pre_hook
       ~Decoder.register_full_backward_hook
+      ~Decoder.register_load_state_dict_post_hook
       ~Decoder.register_module
       ~Decoder.register_parameter
       ~Decoder.requires_grad_

@@ -31,6 +31,7 @@
       ~NN.get_parameter
       ~NN.get_submodule
       ~NN.half
+      ~NN.ipu
       ~NN.load_state_dict
       ~NN.modules
       ~NN.named_buffers
@@ -43,6 +44,7 @@
       ~NN.register_forward_hook
       ~NN.register_forward_pre_hook
       ~NN.register_full_backward_hook
+      ~NN.register_load_state_dict_post_hook
       ~NN.register_module
       ~NN.register_parameter
       ~NN.requires_grad_
