@@ -3,7 +3,6 @@
 
 Use R packages for plotting temporarily. The python fucntion is  in development.<br>
 
-#### load R packages
 ```r
 library(scatterpie)
 library(RColorBrewer)
@@ -12,10 +11,10 @@ library(Seurat)
 library(data.table)
 ```
 ```r
-file_path <- '/data/work/data/pdac/'
+file_path <- '/data/pdac/'
 ```
 
-#### load spatial transcriptomics of primary pancreatic cancer tissue and reference scRNA. The datasets can be downloaded from [GSE111672](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111672).
+Load spatial transcriptomics of primary pancreatic cancer tissue and reference scRNA. The datasets can be downloaded from [GSE111672](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111672).
 
 ```r
 # load st expression matrix
@@ -65,14 +64,12 @@ ind <- as.data.frame(t(sapply(
  ;.}
 ```
 
-
-
-#### load plot function
+Load plot function. The 'spatial_function.R' is stored [here](https://github.com/caokai1073/uniPort/tree/main/R%20process/spot).
 ```r
 source(paste0(file_path,'spatial_function.R'))
 ```
 
-#### Load data from uniPort output
+Load OT plan from uniPort output.
 ```r
 ot <- read.table(paste0(file_path,'OT_PDAC.txt'),sep = '\t',header = T, row.names = 1)
 ot <- as.data.frame(t(ot))
@@ -81,7 +78,7 @@ rownames(ot) <- sapply(strsplit(rownames(ot),'\\.'),function(x)x[[1]])
 ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.25, balance = T)
 ```
 
-#### Visiualization of cluster proportion
+Visiualization of cluster proportion.
 ```r
 p <- stClusterPie(ot_map = ot_map, coord = ind, pie_scale = 0.8)
 print(p)

@@ -1,11 +1,12 @@
-Integrate scATAC and scRNA
-==========================
+Deconvolute microarray-based spatial transcriptomics
+====================================================
 
 
 .. toctree::
 
    PDAC_integration
    PDAC_plot
+   BRCA_plot
 
 
 
