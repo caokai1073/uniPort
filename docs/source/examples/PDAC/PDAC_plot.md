@@ -1,5 +1,5 @@
 
-# Plots for uniPort outputs of PDAC
+# Deconvolute PDAC with OT plan 
 
 Use R packages for plotting temporarily. The python fucntion is  in development.<br>
 
@@ -83,11 +83,11 @@ Visiualization of cluster proportion.
 p <- stClusterPie(ot_map = ot_map, coord = ind, pie_scale = 0.8)
 print(p)
 ```
-<center><img src="./OT_PDAC_LF_F.png" width="60%" height="60%">
+<img src="OT_PDAC_LF_F.png" width="60%" height="60%">
 
 ```r
 p1 <- stClusterExp(ot_map, coord = ind, cluster = 'Cancer clone A',cut = 0.25)
 p2 <- stClusterExp(ot_map, coord = ind, cluster = 'Ductal',cut = 0.25)
 p1+p2
 ```
-<center><img src="./PDAC_CA_Ductal.png" width="80%" height="80%">
+<img src="PDAC_CA_Ductal.png" width="80%" height="80%">
