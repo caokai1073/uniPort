@@ -1,5 +1,5 @@
-Spatial deconvolution of pancreatic ductal adenocarcinoma (PDAC)
-----------------------------------------------------------------
+Spatial deconvolution of PDAC with OT plan
+-------------------------------------------
 Use R packages for plotting temporarily. The python fucntion is  in development.
 
 .. code:: R

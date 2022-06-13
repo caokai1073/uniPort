@@ -1,5 +1,5 @@
-Deconvolute microarray-based spatial transcriptomics
-====================================================
+Deconvolute HER2-positive breast cancer (BRCA)
+==============================================
 
 
 .. toctree::

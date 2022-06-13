@@ -1,5 +1,5 @@
-Spatial deconvolution of HER2-positive breast cancer
-----------------------------------------------------
+Spatial deconvolution of BRCA with OT plan
+-------------------------------------------
 Use R packages for plotting temporarily. The python fucntion is  in development.
 
 .. code:: R

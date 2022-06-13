@@ -1,4 +1,4 @@
-Deconvolute microarray-based spatial transcriptomics
+Deconvolute pancreatic ductal adenocarcinoma (PDAC)
 ====================================================
 
 
