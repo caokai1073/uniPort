@@ -1,5 +1,5 @@
-Deconvolute PDAC with OT matrix 
--------------------------------
+Spatial deconvolution of pancreatic ductal adenocarcinoma (PDAC)
+----------------------------------------------------------------
 Use R packages for plotting temporarily. The python fucntion is  in development.
 
 .. code:: R
@@ -13,12 +13,6 @@ Use R packages for plotting temporarily. The python fucntion is  in development.
 .. code:: R
 
     file_path <- '/data/pdac/'
-
-Load plot function. The 'spatial_function.R' is stored `here <https://github.com/caokai1073/uniPort/tree/main/R%20process/spot/>`_
-
-.. code:: R
-
-    source(paste0(file_path,'spatial_function.R'))
 
 Load spatial transcriptomics of primary pancreatic cancer tissue and reference scRNA. 
 The datasets can be downloaded from `GSE111672 <https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111672>`_.
@@ -72,7 +66,13 @@ The datasets can be downloaded from `GSE111672 <https://www.ncbi.nlm.nih.gov/geo
     ;.}
 
 
-Load OT plan from uniPort output.
+Load plot function. The 'spatial_function.R' is stored `here <https://github.com/caokai1073/uniPort/tree/main/R%20process/spot/>`_.
+
+.. code:: R
+
+    source(paste0(file_path,'spatial_function.R'))
+
+Load OT matrix from uniPort output.
 
 .. code:: R
 
