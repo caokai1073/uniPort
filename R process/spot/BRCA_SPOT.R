@@ -9,6 +9,8 @@ set.seed <- 1234
 file_path <- '/data/work/uniPort/BRCA_SPOT/'
 setwd(file_path)
 
+file_path <- '/data/yupines/kai/data/brca/'
+
 #-----------------------------------------------------------
 #    input data for uniPort
 #-----------------------------------------------------------
@@ -52,6 +54,8 @@ write.table(tmp, quote = F,row.names = T,sep = '\t',file = paste0(file_path,'BRC
 #-----------------------------------------------------------
 source(paste0(file_path,'spatial_function.R'))
 
+source('/data/yupines/kai/upload/spot/spatial_function.R')
+
 ot <- read.table(paste0(file_path,'OT_BRCA_total_RNAref_KL05_OT05.txt'),sep = '\t',header = T, row.names = 1)
 ot <- as.data.frame(t(ot))
 ot_map <- mapCluster(ot,meta = brca_cluster, cluster = 'celltype_major')
@@ -61,11 +65,24 @@ p <- stClusterPie(ot_map = ot_map, st = brca)
 
 # single cluster proportion
 stClusterExp(ot_map, brca, cluster = 'CAFs',cut = 0.25)
-
 SpatialFeaturePlot(brca, features = c('CD3D','ERBB2'),alpha = c(0.8,0.9)) 
 
 
 
 
+
+
+
+
+
+
+
+
+ot_map <- read.table('/data/yupines/kai/test/BRCA_OT_map_LT_T_i60k.txt',sep = '\t')
+p <- stClusterPie(ot_map = ot_map, st = brca)
+
+pdf('/data/yupines/kai/test/BRCA_celltype_LT_T_i60k.txt.pdf',width = 10,height = 7.5)
+print(p)
+dev.off()
 
 

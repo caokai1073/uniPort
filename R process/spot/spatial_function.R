@@ -54,7 +54,7 @@ theme_cluster <- function(){
         panel.border = element_blank())
 }
 
-mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = T, min_cut = NULL){
+mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = F, min_cut = NULL){
   if(is(ref,"Seurat")){
     meta <- ref@meta.data
   } else {
@@ -80,7 +80,7 @@ mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = T,
       cell = ref_cluster[ref_cluster[,cluster] == x,]$cell
       dt = t(as.data.frame(apply(ot[cell,],2,sum)))
       rownames(dt) <- x
-      dt <- dt*(length(cell)/nrow(ref_cluster))
+      dt <- dt/length(cell)
       return(dt)
     }) %>% 
       do.call('rbind',.) %>% as.data.frame() %>% t()
@@ -89,7 +89,7 @@ mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = T,
       cell = ref_cluster[ref_cluster[,cluster] == x,]$cell
       dt = t(as.data.frame(apply(ot[cell,],2,sum)))
       rownames(dt) <- x
-      dt <- dt/length(cell)
+      dt <- dt*(length(cell)/nrow(ref_cluster))
       return(dt)
     }) %>% 
       do.call('rbind',.) %>% as.data.frame() %>% t()
@@ -108,7 +108,8 @@ mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = T,
 
 
 stClusterPie <- function(ot_map, st = NULL, slice = NULL, coord = NULL, 
-                         img_alpha = 0.8, pie_alpha = 0.9, pie_scale = 0.38){
+                         img_alpha = 0.8, pie_alpha = 0.9, pie_scale = 0.38,
+                         color = colorRampPalette(brewer.pal(9,"Set1"))(ncol(cord_ot)-4)){
   if(is(st,"Seurat")){
     if (is.null(slice) && !is.null(names(st@images))){
       slice <- names(st@images)[1]
@@ -117,7 +118,7 @@ stClusterPie <- function(ot_map, st = NULL, slice = NULL, coord = NULL,
     } else {
       img <- st@images[[slice]]@image
     }
-    img_grob <- rasterGrob(
+    img_grob <- grid::rasterGrob(
       matrix(rgb(img[,,1],img[,,2],img[,,3],alpha = img_alpha),nrow=dim(img)[1]),
       width = unit(1,"npc"))
     cord <- st@images[[slice]]@coordinates[,c('imagerow','imagecol')]
@@ -143,7 +144,7 @@ stClusterPie <- function(ot_map, st = NULL, slice = NULL, coord = NULL,
       ggplot2::ylim(nrow(img),0) + 
       ggplot2::xlim(0, ncol(img)) + 
       ggplot2::coord_fixed(ratio = 1,xlim = NULL, ylim = NULL, expand = TRUE, clip = "on") +
-      scale_fill_manual('cluster',values = colorRampPalette(brewer.pal(9,"Set1"))(ncol(cord_ot)-4)) +
+      scale_fill_manual('cluster',values = color) +
       theme_pie()
     return(spatial_scatterPie_plot)
     
@@ -170,10 +171,10 @@ stClusterPie <- function(ot_map, st = NULL, slice = NULL, coord = NULL,
 
 
 stClusterExp <- function(ot_map, st = NULL, slice = NULL, coord = NULL, cluster, cut = NULL,
-                         img_alpha = 0.8, pie_scale = 0.38){
+                         img_alpha = 0.8, point_size = 0.8){
   dt.use = t(apply(ot_map, 1, function(x) x/sum(x, na.rm = TRUE)))
   if(!is.null(cut)){
-    dt.use[,cluster][dt.use[,cluster] < max(dt.use[,cluster])*cut] <- 0
+    dt.use[,cluster][dt.use[,cluster] < max(dt.use[,cluster])*cut] <- NA
   }
   if(is(st,"Seurat")){
     if (is.null(slice) && !is.null(names(st@images))){
@@ -195,7 +196,7 @@ stClusterExp <- function(ot_map, st = NULL, slice = NULL, coord = NULL, cluster,
     spatial_cluster_plot <- ggplot2::ggplot(
       data = cord_ot,aes(x = imagecol_scaled, y = imagerow_scaled, color = get(cluster))) + 
       ggplot2::annotation_custom(grob = img_grob, xmin = 0,xmax = ncol(img), ymin = 0, ymax = -nrow(img)) +
-      ggplot2::geom_point(size = 1,na.rm = TRUE) +
+      ggplot2::geom_point(size = point_size,na.rm = TRUE) +
       ggplot2::scale_color_gradientn(na.value = "transparent",colors = rev(c('#d7191c','#fdae61','#ffffbf'))) + 
       ylim(nrow(img),0) + 
       xlim(0, ncol(img)) + 
@@ -211,6 +212,7 @@ stClusterExp <- function(ot_map, st = NULL, slice = NULL, coord = NULL, cluster,
     } else {
       print('Please provide coordinates of st data!')
     }
+    dt.use = t(apply(ot_map, 1, function(x) x/sum(x, na.rm = TRUE)))
     dt.use <- cbind(coord,dt.use[,cluster,drop=F])
     max.val <- quantile(dt.use[, cluster],0.95)
     dt.use[, cluster] <- ifelse(dt.use[, cluster] > max.val, max.val, dt.use[, cluster])
@@ -285,7 +287,7 @@ stGeneExp <- function(exp, gene, coord = NULL, ncol = NULL, size_range = c(2, 6.
                             labels = c("low","high")) + 
         theme_gene()
       })
-    fig <- ggarrange(plotlist = fig.list, ncol = ncol)
+    fig <- ggpubr::ggarrange(plotlist = fig.list, ncol = ncol)
     return(fig)
   }
 }

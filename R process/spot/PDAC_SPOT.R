@@ -2,9 +2,12 @@ library(scatterpie)
 library(RColorBrewer)
 library(grDevices)
 library(Seurat)
+library(data.table)
 set.seed(1234)
 
 file_path <- '/data/work/uniPort/PDAC_SPOT/'
+
+file_path <- '/data/yupines/kai/data/st/PDAC_SPOTS/'
 
 #-----------------------------------------------------------
 #    input data for uniPort
@@ -67,17 +70,56 @@ source(paste0(file_path,'spatial_function.R'))
 ot <- read.table(paste0(file_path,'OT_PDAC_RNAref.txt'),sep = '\t',header = T, row.names = 1)
 
 rownames(names) <- names$cell
-ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.25, balance = F)
+ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.15, balance = T)
 
 # spatial scatter pie of cluster proportion
 p <- stClusterPie(ot_map = ot_map, coord = ind, pie_scale = 0.8)
 p
 
 # single cluster proportion
-stClusterExp(ot_map, coord = ind, cluster = 'Cancer clone A',cut = 0.05)
+p1 <- stClusterExp(ot_map, coord = ind, cluster = 'Cancer clone A',cut = 0.25)
+p2 <- stClusterExp(ot_map, coord = ind, cluster = 'Ductal',cut = 0.25)
+
+pdf('/data/yupines/kai/test/PDAC_CA_Ductal.pdf',width = 15,height = 6.5)
+p1+p2
+dev.off()
 
 # gene expression
 dt <- stGeneNorm(dataA)
 stGeneExp(exp = dt, coord = ind, gene = c('CRISP3','TM4SF1'))
+stGeneExp(exp = dt, coord = ind, gene = c('MUC5B'))
 
+
+
+
+
+p1 <- stClusterExp(ot_map, brca, cluster = 'CAFs',cut = 0.15, point_size = 0.8)
+p2 <- stClusterExp(ot_map, brca, cluster = 'Cancer.Epithelial',cut = 0.35, point_size = 0.8)
+
+pdf('/data/yupines/kai/test/BRCA_CAFs_Cancer.Epithelial.pdf',width = 12,height = 5)
+p1+p2
+dev.off()
+
+
+
+
+
+
+
+
+rownames(names) <- names$cell
+ot <- read.table('/data/yupines/kai/test/OT_PDAC_LF.txt',sep = '\t',header = T, row.names = 1)
+ot <- as.data.frame(t(ot))
+rownames(ot) <- sapply(strsplit(rownames(ot),'\\.'),function(x)x[[1]])
+
+ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.25,
+                     balance = T)
+
+
+# spatial scatter pie of cluster proportion
+p <- stClusterPie(ot_map = ot_map, coord = ind, pie_scale = 0.8)
+
+pdf('/data/yupines/kai/test/OT_PDAC_LF_T.pdf',height = 7.5,width = 10)
+print(p)
+dev.off()
 

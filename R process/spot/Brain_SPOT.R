@@ -57,3 +57,26 @@ stClusterExp(ot_map, brain, cluster = 'VLMC',cut = 0.25)
 SpatialFeaturePlot(brain, features = c('Olig1','Atp1b2','Dcn','Olig2','Slc1a2','Osr1'),alpha = c(0.8,0.9)) 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ot_map <- read.table('/data/yupines/kai/test/OT_Brain_LF_sub_KL0.5_OT0.5_T.txt',sep = '\t')
+p <- stClusterPie(ot_map = ot_map, st = brain)
+
+pdf('/data/yupines/kai/test/OT_Brain_LF_sub_KL0.5_OT0.5_T.pdf',width = 10,height = 7.5)
+print(p)
+dev.off()
+
+
+
