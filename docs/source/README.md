@@ -44,7 +44,6 @@ pip3 install uniport
 + **save_OT**: if True, output a global OT plan. Need more memory. Default: False
 + **out**: output of uniPort. Choose from ['latent', 'project', 'predict']. If out=='latent', train the network and output cell embeddings. If out=='project', project data into the latent space and output cell embeddings. If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. Default: 'latent'
 
-## Example
 ```Python
 import uniport as up
 import scanpy as sc
