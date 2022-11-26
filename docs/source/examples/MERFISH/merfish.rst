@@ -6,6 +6,8 @@ Integrate MERFISH and scRNA
 
    MERFISH_and_scRNA
    MERFISH_predict
+   MERFISH_impute
+
 
 
 
