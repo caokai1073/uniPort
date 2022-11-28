@@ -401,6 +401,8 @@ def Run(
     else:
         device='cpu'
     
+    print('Device:', device)
+
     outdir = outdir+'/'
     os.makedirs(outdir+'/checkpoint', exist_ok=True)
     log = create_logger('', fh=outdir+'log.txt')
