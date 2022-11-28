@@ -279,6 +279,7 @@ class VAE(nn.Module):
 
                     for i, (x, idx) in tk0:
                         x = x.float().to(device)
+                        idx = idx.to(device)
 
                         x_list = []
                         num_sum = []
@@ -325,6 +326,7 @@ class VAE(nn.Module):
                     for i, (x,y,idx) in tk0:
 
                         x, y = x.float().to(device), y.long().to(device)    
+                        idx = idx.to(device)
 
                         if len(torch.unique(y)) < self.n_domain:
                             continue
@@ -407,8 +409,10 @@ class VAE(nn.Module):
                     for i, (x, y, idx) in tk0:
 
                         x_c, y = x[:, 0:num_gene[self.n_domain]].float().to(device), y.long().to(device)  
+                        idx = idx.to(device)
                                                     
                         loc_ref = torch.where(y==self.ref_id)[0]
+
                         idx_ref = idx[loc_ref] - sum(num_cell[0:self.ref_id])
 
                         loc_query = {}
