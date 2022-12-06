@@ -75,10 +75,17 @@ adata1 = up.Run(adatas=[adata1, adata2], mode='v')
 ```
 
 ## Citation
-    @article{Cao2022.02.14.480323,
-	author = {Cao, Kai and Gong, Qiyu and Hong, Yiguang and Wan, Lin},
-	title = {uniPort: a unified computational framework for single-cell data integration with optimal transport},
-	year = {2022},
-	doi = {10.1101/2022.02.14.480323},
-	publisher = {Cold Spring Harbor Laboratory},
-	journal = {bioRxiv}}
+    @Article{Cao2022,
+	author={Cao, Kai and Gong, Qiyu and Hong, Yiguang and Wan, Lin},
+	title={A unified computational framework for single-cell data integration with optimal transport},
+	journal={Nature Communications},
+	year={2022},
+	month={Dec},
+	day={01},
+	volume={13},
+	number={1},
+	pages={7419},
+	issn={2041-1723},
+	doi={10.1038/s41467-022-35094-8},
+	}
+
