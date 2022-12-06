@@ -75,7 +75,7 @@ adata1 = up.Run(adatas=[adata1, adata2], mode='v')
 ```
 
 ## Citation
-    @Article{Cao2022,
+	@Article{Cao2022,
 	author={Cao, Kai and Gong, Qiyu and Hong, Yiguang and Wan, Lin},
 	title={A unified computational framework for single-cell data integration with optimal transport},
 	journal={Nature Communications},
@@ -87,5 +87,5 @@ adata1 = up.Run(adatas=[adata1, adata2], mode='v')
 	pages={7419},
 	issn={2041-1723},
 	doi={10.1038/s41467-022-35094-8},
-	}
+}
 
