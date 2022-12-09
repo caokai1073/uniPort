@@ -62,16 +62,9 @@ adata_cm = sc.read_h5ad('adata_cm.h5ad') # preprocesssed data with common HVG
 # integration with both common and dataset-specific genes
 # latent representation are stored in adata.obs['latent']
 adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
-# save global optimal transport matrix
-adata, OT = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm, save_OT=True)
-# integration with only common genes
-adata = up.Run(adata_cm=adata_cm)
+# save global optimal transport matrix: adata, OT = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm, save_OT=True)
+# integration with only common genes: adata = up.Run(adata_cm=adata_cm)
 
-# integration without common genes, 
-adata = up.Run(adatas=[adata1, adata2], mode='d')
-
-# integration with paired datasets, refine adata1 with adata2.
-adata1 = up.Run(adatas=[adata1, adata2], mode='v')
 ```
 
 ## Citation
