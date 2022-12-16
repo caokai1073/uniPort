@@ -66,7 +66,6 @@ adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
 # integration with only common genes: adata = up.Run(adata_cm=adata_cm)
 
 ```
-## Contact via caokai1073@gmail.com
 
 ## Citation
 	@Article{Cao2022,
@@ -82,4 +81,7 @@ adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
 	issn={2041-1723},
 	doi={10.1038/s41467-022-35094-8},
 }
+
+## Contact via caokai1073@gmail.com
+
 
