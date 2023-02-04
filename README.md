@@ -47,7 +47,8 @@ pip3 install uniport
 + **out**: output of uniPort. Choose from ['latent', 'project', 'predict']. If out=='latent', train the network and output cell embeddings. If out=='project', project data into the latent space and output cell embeddings. If out=='predict', project data into the latent space and output cell embeddings through a specified decoder. Default: 'latent'
 
 ## Data
-+ ### Data before and after processing are available at [**uniPort source data link**](https://drive.google.com/drive/folders/19WAzlfBAtI_EUIv0rgkZW1zwzUopsHAv?usp=share_link)
++ [**Google Drive**](https://drive.google.com/drive/folders/19WAzlfBAtI_EUIv0rgkZW1zwzUopsHAv?usp=share_link)
++ [**Baidu Drive**](https://pan.baidu.com/s/1CikO0K-ZWcKlxAgK7fkMcQ) Code: 1122
 
 ## Example
 ```Python
@@ -82,6 +83,6 @@ adata = up.Run(adatas=[adata1, adata2], adata_cm=adata_cm)
 	doi={10.1038/s41467-022-35094-8},
 }
 
-### Contact via caokai1073@gmail.com
+Contact via caokai1073@gmail.com
 
 
