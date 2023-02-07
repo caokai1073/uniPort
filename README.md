@@ -7,7 +7,7 @@
 [![Downloads](https://pepy.tech/badge/uniport/month)](https://pepy.tech/project/uniport)
 
 The original paper: 
-[a unified single-cell data integration framework with optimal transport]([10.1038/s41467-022-35094-8)](https://www.nature.com/articles/s41467-022-35094-8)
+[a unified single-cell data integration framework with optimal transport](https://www.nature.com/articles/s41467-022-35094-8)
 
 Website and documentation: [https://uniport.readthedocs.io](https://uniport.readthedocs.io)
 
