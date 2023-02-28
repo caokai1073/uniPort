@@ -70,8 +70,9 @@ mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = F,
     print('Please provide reference cluster name')
   }
   ref_cluster$cell <- rownames(ref_cluster)
-  if(rownames(ot) %in% ref_cluster$cell){
-    ot[] <- lapply(ot, as.numeric)
+  if(isTRUE(unique(rownames(ot) %in% ref_cluster$cell))){
+    #ot[] <- lapply(ot, as.numeric)
+    ot <- as.data.frame(lapply(ot,as.numeric))
   } else {
     print('Please make sure that rownames of ot is the barcodes of scRNA reference data or rownames of meta file is cell name!')
   }
