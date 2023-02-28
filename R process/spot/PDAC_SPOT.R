@@ -46,7 +46,7 @@ colnames(scdataA) = paste0('cell',1:ncol(scdataA))
 
 # save SPOT and RNA ref file for uniPort input
 write.table(scdataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA.txt'))
-write.table(dataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_ST.txt'))
+write.table(dataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_SPOT.txt'))
 write.table(names, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA_label.txt'))
 
 # get coord from st data
@@ -67,8 +67,7 @@ ind <- as.data.frame(t(sapply(
 #-----------------------------------------------------------
 source(paste0(file_path,'spatial_function.R'))
 
-ot <- read.table(paste0(file_path,'OT_PDAC.txt'),sep = '\t',header = T, row.names = 1)
-
+ot <- read.table(paste0(file_path,'OT_PDAC.txt'),sep = '\t',header = T, row.names = 1) %>% t()
 rownames(names) <- names$cell
 ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.15, balance = T)
 
