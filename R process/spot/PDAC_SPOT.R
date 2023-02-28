@@ -2,13 +2,13 @@ library(scatterpie)
 library(RColorBrewer)
 library(grDevices)
 library(Seurat)
+library(tibble)
 library(data.table)
 set.seed(1234)
+library(dplyr)
+library(stringr)
 
-file_path <- '/data/work/uniPort/PDAC_SPOT/'
-
-file_path <- '/data/yupines/kai/data/st/PDAC_SPOTS/'
-
+file_path = '/Users/cao/Downloads/uniPort-main-2/R process/spot/'
 #-----------------------------------------------------------
 #    input data for uniPort
 #-----------------------------------------------------------
@@ -67,7 +67,7 @@ ind <- as.data.frame(t(sapply(
 #-----------------------------------------------------------
 source(paste0(file_path,'spatial_function.R'))
 
-ot <- read.table(paste0(file_path,'OT_PDAC_RNAref.txt'),sep = '\t',header = T, row.names = 1)
+ot <- read.table(paste0(file_path,'OT_PDAC.txt'),sep = '\t',header = T, row.names = 1)
 
 rownames(names) <- names$cell
 ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.15, balance = T)
