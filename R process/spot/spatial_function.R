@@ -1,3 +1,15 @@
+library(ggpubr)
+library(ggplot2)
+library(scatterpie)
+library(RColorBrewer)
+library(grDevices)
+library(Seurat)
+library(viridis)
+library(tibble)
+library(data.table)
+set.seed(1234)
+library(dplyr)
+library(stringr)
 
 # make sure that rownames(ot) is the barcodes of single-cell reference data
 # ref is the seurat Object
@@ -71,8 +83,7 @@ mapCluster <- function(ot, ref = NULL, cluster = NULL, meta = NULL, balance = F,
   }
   ref_cluster$cell <- rownames(ref_cluster)
   if(isTRUE(unique(rownames(ot) %in% ref_cluster$cell))){
-    #ot[] <- lapply(ot, as.numeric)
-    ot <- as.data.frame(lapply(ot,as.numeric))
+    ot[] <- apply(ot, 2, as.numeric)
   } else {
     print('Please make sure that rownames of ot is the barcodes of scRNA reference data or rownames of meta file is cell name!')
   }

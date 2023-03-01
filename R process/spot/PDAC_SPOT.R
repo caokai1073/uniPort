@@ -1,14 +1,17 @@
+library(ggpubr)
+library(ggplot2)
 library(scatterpie)
 library(RColorBrewer)
 library(grDevices)
 library(Seurat)
+library(viridis)
 library(tibble)
 library(data.table)
 set.seed(1234)
 library(dplyr)
 library(stringr)
 
-file_path = '/Users/cao/Downloads/uniPort-main-2/R process/spot/'
+file_path = '/Users/cao/Desktop/PDAC/'
 #-----------------------------------------------------------
 #    input data for uniPort
 #-----------------------------------------------------------
@@ -45,9 +48,9 @@ names$cell_type[str_detect(names$cell_type,'Fibroblasts')] = 'Fibroblasts'
 colnames(scdataA) = paste0('cell',1:ncol(scdataA))
 
 # save SPOT and RNA ref file for uniPort input
-write.table(scdataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA.txt'))
-write.table(dataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_SPOT.txt'))
-write.table(names, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA_label.txt'))
+#write.table(scdataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA.txt'))
+#write.table(dataA, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_SPOT.txt'))
+#write.table(names, quote = F,row.names = T, sep = '\t', file = paste0(file_path,'PDAC_scRNA_label.txt'))
 
 # get coord from st data
 ind <- as.data.frame(t(sapply(
@@ -67,7 +70,7 @@ ind <- as.data.frame(t(sapply(
 #-----------------------------------------------------------
 source(paste0(file_path,'spatial_function.R'))
 
-ot <- read.table(paste0(file_path,'OT_PDAC.txt'),sep = '\t',header = T, row.names = 1) %>% t()
+ot <- read.table(paste0(file_path,'PDAC/OT_PDAC.txt'),sep = '\t',header = T, row.names = 1) %>% t()
 rownames(names) <- names$cell
 ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.15, balance = T)
 
@@ -79,8 +82,8 @@ p
 p1 <- stClusterExp(ot_map, coord = ind, cluster = 'Cancer clone A',cut = 0.25)
 p2 <- stClusterExp(ot_map, coord = ind, cluster = 'Ductal',cut = 0.25)
 
-pdf('/data/yupines/kai/test/PDAC_CA_Ductal.pdf',width = 15,height = 6.5)
-p1+p2
+pdf('PDAC_CA_Ductal.pdf',width = 15,height = 6.5)
+p1 + p2
 dev.off()
 
 # gene expression
@@ -89,25 +92,16 @@ stGeneExp(exp = dt, coord = ind, gene = c('CRISP3','TM4SF1'))
 stGeneExp(exp = dt, coord = ind, gene = c('MUC5B'))
 
 
-
-
-
 p1 <- stClusterExp(ot_map, brca, cluster = 'CAFs',cut = 0.15, point_size = 0.8)
 p2 <- stClusterExp(ot_map, brca, cluster = 'Cancer.Epithelial',cut = 0.35, point_size = 0.8)
 
-pdf('/data/yupines/kai/test/BRCA_CAFs_Cancer.Epithelial.pdf',width = 12,height = 5)
+pdf('BRCA_CAFs_Cancer.Epithelial.pdf',width = 12,height = 5)
 p1+p2
 dev.off()
 
 
-
-
-
-
-
-
 rownames(names) <- names$cell
-ot <- read.table('/data/yupines/kai/test/OT_PDAC_LF.txt',sep = '\t',header = T, row.names = 1)
+ot <- read.table('OT_PDAC_LF.txt',sep = '\t',header = T, row.names = 1)
 ot <- as.data.frame(t(ot))
 rownames(ot) <- sapply(strsplit(rownames(ot),'\\.'),function(x)x[[1]])
 
@@ -118,7 +112,7 @@ ot_map <- mapCluster(ot, meta = names, cluster = 'cell_type', min_cut = 0.25,
 # spatial scatter pie of cluster proportion
 p <- stClusterPie(ot_map = ot_map, coord = ind, pie_scale = 0.8)
 
-pdf('/data/yupines/kai/test/OT_PDAC_LF_T.pdf',height = 7.5,width = 10)
+pdf('OT_PDAC_LF_T.pdf',height = 7.5,width = 10)
 print(p)
 dev.off()
 
