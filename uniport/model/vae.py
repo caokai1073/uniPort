@@ -351,7 +351,7 @@ class VAE(nn.Module):
                             idx_query[j] = idx[loc_query[j]] - sum(num_cell[0:j])
 
                             if save_OT:
-                                tran_batch[j] = torch.from_numpy(tran[j][idx_query[j]][:,idx_ref]).to(device)
+                                tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][:,idx_ref]
                             else:
                                 tran_batch[j] = None
 
@@ -381,8 +381,8 @@ class VAE(nn.Module):
                                 mu_dict[self.ref_id].detach(), var_dict[self.ref_id].detach(), Couple=Prior_batch, device=device)
 
                             if save_OT:
-                                t0 = np.repeat(idx_query[j], len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
-                                t1 = np.tile(idx_ref, (len(idx_query[j]), 1))
+                                t0 = np.repeat(idx_query[j].cpu().numpy(), len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
+                                t1 = np.tile(idx_ref.cpu().numpy(), (len(idx_query[j]), 1))
                                 tran[j][t0,t1] = tran_batch[j].cpu().numpy()
 
                             ot_loss += ot_loss_tmp
@@ -432,9 +432,9 @@ class VAE(nn.Module):
                                 if save_OT:
                                     if len(idx_query[j]) != 0:
                                         if (len(idx_query[j])) == 1:
-                                            tran_batch[j] = torch.from_numpy(tran[j][idx_query[j]][idx_ref]).to(device)
+                                            tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][idx_ref]
                                         else:
-                                            tran_batch[j] = torch.from_numpy(tran[j][idx_query[j]][:,idx_ref]).to(device)
+                                            tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][:,idx_ref]
                                 else:
                                     tran_batch[j] = None
 
@@ -527,8 +527,8 @@ class VAE(nn.Module):
                                         )
 
                                     if save_OT:
-                                        t0 = np.repeat(idx_query[j], len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
-                                        t1 = np.tile(idx_ref, (len(idx_query[j]), 1))
+                                        t0 = np.repeat(idx_query[j].cpu().numpy(), len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
+                                        t1 = np.tile(idx_ref.cpu().numpy(), (len(idx_query[j]), 1))
                                         tran[j][t0,t1] = tran_batch[j].cpu().numpy()
 
                                     ot_loss += ot_loss_tmp
