@@ -453,21 +453,13 @@ def Run(
             print(adata_cm)
             print('\n')
 
-        if save_OT:           
-            memory = 0
-            for i in range(n_domain):
-                if i != ref_id:
-                    memory += num_cell[i]*num_cell[ref_id]*32/(8*1e9) * 4
-
-            print('Warning! Saving Optimal Transport plan needs extra {:.2f} GB memory, please set save_OT=False if no enough memory!'.format(memory)) 
+        if save_OT:
             for i in range(n_domain):
                 if i != ref_id:
                     ns = num_cell[i]
                     nt = num_cell[ref_id]
                     tran_tmp = np.ones((ns, nt)) / (ns * nt)
                     tran[i] = tran_tmp.astype(np.float32)
-
-                    print(tran[i].dtype)
 
                     print('Size of transport plan between datasets {} and {}:'.format(i, ref_id), np.shape(tran[i]))
 

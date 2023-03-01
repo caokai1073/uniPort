@@ -1,7 +1,7 @@
 # from pkg_resources import get_distribution
 
 # __version__ = get_distribution('scalex').version
-__version__ = '1.1.2'
+__version__ = '1.2.0'
 __author__ = 'Kai Cao'
 __email__ = 'caokai@amss.ac.cn'
 
