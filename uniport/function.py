@@ -25,7 +25,6 @@ from sklearn.preprocessing import MaxAbsScaler
 
 from glob import glob
 
-np.warnings.filterwarnings('ignore')
 DATA_PATH = os.path.expanduser("~")+'/.uniport/'
 CHUNK_SIZE = 20000
 
