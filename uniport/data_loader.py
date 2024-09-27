@@ -244,6 +244,10 @@ def load_data(adatas, mode='h', use_rep=['X','X'], num_cell=None, max_gene=None,
                 if i == 0:
                     x = scipy.sparse.hstack((x_c, x_s))
                 else:
+                    if not issparse(x_c):
+                        x_c = scipy.sparse.csr_matrix(x_c)
+                    if not issparse(x_s):
+                        x_s = scipy.sparse.csr_matrix(x_s)
                     x =  scipy.sparse.vstack((x, scipy.sparse.hstack((x_c, x_s))))
                 x = x.tocsr()
 
