@@ -465,7 +465,6 @@ def Run(
             adatas=adatas, 
             mode=mode,
             use_rep=use_rep,
-            num_cell=num_cell,
             max_gene=max(num_gene), 
             adata_cm=adata_cm,
             use_specific=use_specific, 
@@ -540,7 +539,6 @@ def Run(
         _, testloader = load_data(
             adatas=adatas, 
             max_gene=max(num_gene), 
-            num_cell=num_cell,
             adata_cm=adata_cm, 
             domain_name=batch_key,
             batch_size=batch_size, 
