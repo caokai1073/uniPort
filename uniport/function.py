@@ -275,7 +275,7 @@ def Run(
         input_id=0,
         pred_id=1,
         seed=124, 
-        num_workers=4,
+        num_workers=0,
         patience=30,
         batch_key='domain_id',
         source_name='source',
