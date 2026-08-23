@@ -5,8 +5,9 @@
 """
 
 import torch
-import numpy as np
 from torch.distributions import Normal, kl_divergence
+
+__all__ = ['kl_div', 'distance_matrix', 'distance_gmm', 'unbalanced_ot']
 
 def kl_div(mu, var, weight=None):
     loss = kl_divergence(Normal(mu, var.sqrt()), Normal(torch.zeros_like(mu),torch.ones_like(var))).sum(dim=1)
@@ -37,9 +38,9 @@ def distance_matrix(pts_src: torch.Tensor, pts_dst: torch.Tensor, p: int = 2):
     [R, C] matrix
         distance matrix
     """
-    x_col = pts_src.unsqueeze(1)
-    y_row = pts_dst.unsqueeze(0)
-    distance = torch.sum((torch.abs(x_col - y_row)) ** p, 2)
+    diff = pts_src.unsqueeze(1) - pts_dst.unsqueeze(0)
+    # |d|**2 is bit-identical to d*d but avoids an abs pass and the pow kernel.
+    distance = torch.sum(diff * diff if p == 2 else torch.abs(diff) ** p, 2)
     return distance
 
 def distance_gmm(mu_src: torch.Tensor, mu_dst: torch.Tensor, var_src: torch.Tensor, var_dst: torch.Tensor):
@@ -118,43 +119,47 @@ def unbalanced_ot(tran, mu1, var1, mu2, var2, reg=0.1, reg_m=1.0, Couple=None, d
 
     cost_pp = distance_gmm(mu1, mu2, var1, var2)
 
-    if query_weight is None: 
-        p_s = torch.ones(ns, 1) / ns
+    if query_weight is None:
+        p_s = torch.ones(ns, 1, device=device) / ns
     else:
         query_batch_weight = query_weight[idx_q]
-        p_s = query_batch_weight/torch.sum(query_batch_weight)
+        p_s = (query_batch_weight/torch.sum(query_batch_weight)).to(device)
 
-    if ref_weight is None: 
-        p_t = torch.ones(nt, 1) / nt
+    if ref_weight is None:
+        p_t = torch.ones(nt, 1, device=device) / nt
     else:
         ref_batch_weight = ref_weight[idx_r]
-        p_t = ref_batch_weight/torch.sum(ref_batch_weight)
-
-    p_s = p_s.to(device)
-    p_t = p_t.to(device)
+        p_t = (ref_batch_weight/torch.sum(ref_batch_weight)).to(device)
 
     if tran is None:
-        tran = torch.ones(ns, nt) / (ns * nt)
-        tran = tran.to(device)
+        tran = torch.ones(ns, nt, device=device) / (ns * nt)
 
-    dual = (torch.ones(ns, 1) / ns).to(device)
+    dual = torch.ones(ns, 1, device=device) / ns
     f = reg_m / (reg_m + reg)
 
-    for m in range(10):
+    # The Sinkhorn iterations below only ever reach the caller through
+    # `tran.detach()`, so no autograd graph has to be recorded for them; the
+    # gradient path of the returned loss runs through `cost_pp` alone.
+    with torch.no_grad():
+        cost = cost_pp.detach()
         if Couple is not None:
-            cost = cost_pp*Couple
-        else:
-            cost = cost_pp
+            cost = cost * Couple
 
-        kernel = torch.exp(-cost / (reg*torch.max(torch.abs(cost)))) * tran
-        b = p_t / (torch.t(kernel) @ dual)
-        # dual = p_s / (kernel @ b)
-        for i in range(10):
-            dual =( p_s / (kernel @ b) )**f
-            b = ( p_t / (torch.t(kernel) @ dual) )**f
-        tran = (dual @ torch.t(b)) * kernel
-    if torch.isnan(tran).sum() > 0:
-        tran = (torch.ones(ns, nt) / (ns * nt)).to(device)
+        # `cost` is loop-invariant, so the exponentiated kernel is too: hoist it
+        # out instead of recomputing exp() and max() on every outer iteration.
+        kernel_base = torch.exp(-cost / (reg * torch.max(torch.abs(cost))))
+
+        for m in range(10):
+            kernel = kernel_base * tran
+            kernel_t = kernel.t()
+            b = p_t / (kernel_t @ dual)
+            for i in range(10):
+                dual = (p_s / (kernel @ b)) ** f
+                b = (p_t / (kernel_t @ dual)) ** f
+            tran = (dual @ b.t()) * kernel
+
+        if torch.isnan(tran).any():
+            tran = torch.ones(ns, nt, device=device) / (ns * nt)
 
     # pho = tran.mean()
     # h_func = 1 - 0.5 * ( 1 + torch.sign(pho - tran) )
@@ -163,9 +168,9 @@ def unbalanced_ot(tran, mu1, var1, mu2, var2, reg=0.1, reg_m=1.0, Couple=None, d
     # d_fgw2 = ((tran.detach().data - hat_tran.detach().data) * torch.log(1 + torch.exp(-cost_pp))).sum()
     # d_fgw = d_fgw1 + d_fgw2
 
-    d_fgw = (cost_pp * tran.detach().data).sum()
+    d_fgw = (cost_pp * tran).sum()
 
-    return d_fgw, tran.detach()
+    return d_fgw, tran
 
 
 

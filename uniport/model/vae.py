@@ -9,11 +9,8 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
-from itertools import cycle
-import sys
-import time
-from .layer import *
-from .loss import *
+from .layer import Encoder, Decoder
+from .loss import kl_div, unbalanced_ot
 
 
 class VAE(nn.Module):
@@ -59,7 +56,7 @@ class VAE(nn.Module):
         path
             file path that stores the model parameters
         """
-        pretrained_dict = torch.load(path, map_location=lambda storage, loc: storage)                            
+        pretrained_dict = torch.load(path, map_location='cpu', weights_only=True)
         model_dict = self.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         model_dict.update(pretrained_dict) 
@@ -118,64 +115,64 @@ class VAE(nn.Module):
         else:
             self.train()
 
-        # indices = np.zeros(dataloader.dataset.shape[0])
-        output = []
-        if out == 'latent' or out == 'project':
-            # output = np.zeros((dataloader.dataset.shape[0], self.z_dim))
+        # Inference never backpropagates: the results were already detached
+        # before being collected, so building the graph was pure overhead.
+        with torch.no_grad():
+            output = []
+            if out == 'latent' or out == 'project':
 
-            if mode == 'v':
-                for x, idx in dataloader:
-                    x = x.float().to(device)
-                    z = self.encoder(x[:, 0:num_gene[0]], 0)[1]
-                    output.append(z.detach().cpu())
-                output = torch.cat(output).numpy()
+                if mode == 'v':
+                    for x, idx in dataloader:
+                        x = x.to(device, non_blocking=True).float()
+                        z = self.encoder(x[:, 0:num_gene[0]].contiguous(), 0)[1]
+                        output.append(z.cpu())
+                    output = torch.cat(output).numpy()
 
-            elif mode == 'd':
-                for x, y,idx in dataloader:
-                    x, y = x[:, 0:num_gene[batch_id]].float().to(device), y.long().to(device)
-                    loc = torch.where(y==batch_id)[0]
-                    x = x[loc]
-                    z = self.encoder(x, batch_id)[1] # z, mu, var
-                    output.append(z.detach().cpu())
-                output = torch.cat(output).numpy()
+                elif mode == 'd':
+                    for x, y, idx in dataloader:
+                        x = x[:, 0:num_gene[batch_id]].contiguous().to(device, non_blocking=True).float()
+                        y = y.to(device, non_blocking=True).long()
+                        loc = torch.where(y==batch_id)[0]
+                        x = x[loc]
+                        z = self.encoder(x, batch_id)[1] # z, mu, var
+                        output.append(z.cpu())
+                    output = torch.cat(output).numpy()
 
-            elif mode == 'h':
-                output = np.zeros((dataloader.dataset.shape[0], self.z_dim))
-                for x,y,idx in dataloader:
-                    x_c = x[:, 0:num_gene[self.n_domain]].float().to(device)
-                    z = self.encoder(x_c, 0)[1]
-                    output[idx] = z.detach().cpu().numpy()
+                elif mode == 'h':
+                    output = np.zeros((dataloader.dataset.shape[0], self.z_dim))
+                    for x, y, idx in dataloader:
+                        x_c = x[:, 0:num_gene[self.n_domain]].contiguous().to(device, non_blocking=True).float()
+                        z = self.encoder(x_c, 0)[1]
+                        output[idx.numpy()] = z.cpu().numpy()
 
-                    # output.append(z.detach().cpu())
-                # output = torch.cat(output).numpy()
+            elif out == 'predict':
 
-        elif out == 'predict':
+                if mode == 'v':
+                    for x, idx in dataloader:
+                        x = x.to(device, non_blocking=True).float()
+                        z = self.encoder(x[:, 0:num_gene[0]].contiguous(), 0)[1]
+                        recon = self.decoder(z, pred_id)
+                        output.append(recon.cpu())
+                    output = torch.cat(output).numpy()
 
-            if mode == 'v':
-                for x, idx in dataloader:
-                    x = x.float().to(device)
-                    z = self.encoder(x[:, 0:num_gene[0]], 0)[1]
-                    recon = self.decoder(z, pred_id)
-                    output.append(recon.detach().cpu())
-                output = torch.cat(output).numpy()
+                elif mode == 'd':
+                    for x, y, idx in dataloader:
+                        x = x[:, 0:num_gene[batch_id]].contiguous().to(device, non_blocking=True).float()
+                        y = y.to(device, non_blocking=True).long()
+                        loc = torch.where(y==batch_id)[0]
+                        x = x[loc]
+                        z = self.encoder(x, batch_id)[1] # z, mu, var
+                        recon = self.decoder(z, pred_id)
+                        output.append(recon.cpu())
+                    output = torch.cat(output).numpy()
 
-            elif mode == 'd':
-                for x, y,idx in dataloader:
-                    x, y = x[:, 0:num_gene[batch_id]].float().to(device), y.long().to(device)
-                    loc = torch.where(y==batch_id)[0]
-                    x = x[loc]
-                    z = self.encoder(x, batch_id)[1] # z, mu, var
-                    recon = self.decoder(z, pred_id)
-                    output.append(recon.detach().cpu())
-                output = torch.cat(output).numpy()
-
-            elif mode == 'h':
-                output = np.zeros((dataloader.dataset.shape[0], num_gene[pred_id]))
-                for x,y,idx in dataloader:
-                    x_c = x[:, 0:num_gene[self.n_domain]].float().to(device)
-                    z = self.encoder(x_c, 0)[1]
-                    recon = self.decoder(z, pred_id+1)
-                    output[idx] = recon.detach().cpu().numpy()
+                elif mode == 'h':
+                    output = np.zeros((dataloader.dataset.shape[0], num_gene[pred_id]))
+                    for x, y, idx in dataloader:
+                        x_c = x[:, 0:num_gene[self.n_domain]].contiguous().to(device, non_blocking=True).float()
+                        z = self.encoder(x_c, 0)[1]
+                        recon = self.decoder(z, pred_id+1)
+                        output[idx.numpy()] = recon.cpu().numpy()
 
         return output
 
@@ -227,7 +224,10 @@ class VAE(nn.Module):
         label_weight
             Prior-guided weighted vectors. Default: None
         Prior
-            Prior correspondence matrix.
+            Prior correspondence matrices, indexed by absolute domain id: entry
+            `j` is the prior between query domain `j` and the reference domain,
+            so it must be long enough to be indexed at every id in
+            `range(n_domain)` except `ref_id`.
         save_OT
             If True, output a global OT plan. Default: False
         use_specific
@@ -258,7 +258,11 @@ class VAE(nn.Module):
 
         self.to(device)
 
-        optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=5e-4)
+        # foreach batches the per-parameter update into grouped kernels. It is
+        # the same arithmetic as the default single-tensor path (verified
+        # bit-identical) but avoids one python round trip per parameter tensor,
+        # which matters here because every domain adds its own decoder.
+        optim = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=5e-4, foreach=True)
 
         n_epoch = int(np.ceil(max_iteration/len(dataloader)))
 
@@ -268,33 +272,68 @@ class VAE(nn.Module):
             loss_func = nn.MSELoss()
         elif loss_type == 'L1':
             loss_func = nn.L1Loss()
-        
-        with tqdm(range(n_epoch), total=n_epoch, desc='Epochs') as tq:       
+        else:
+            raise ValueError("loss_type must be one of 'BCE', 'MSE' or 'L1', got {!r}".format(loss_type))
+
+        # Offset of every dataset inside the concatenated index space. The
+        # original code recomputed `sum(num_cell[0:j])` for every domain of
+        # every mini batch.
+        offsets = np.concatenate(([0], np.cumsum(num_cell))).tolist()
+
+        query_id = list(range(self.n_domain))
+        query_id.remove(self.ref_id)
+
+        # Move the reweighting vectors to the device once instead of on every
+        # mini batch (this also makes them usable with GPU-resident indices).
+        if label_weight is not None:
+            label_weight = [w if w is None else w.to(device) for w in label_weight]
+
+        # Column offsets of each modality inside a vertically-concatenated cell.
+        if mode == 'v':
+            bounds = np.concatenate(([0], np.cumsum(num_gene[:self.n_domain]))).tolist()
+
+        def _slice_tran(j, idx_q, idx_r):
+            """Mini-batch block of the global OT plan, sliced before transfer.
+
+            Indexing the host array first moves `len(idx_q) x len(idx_r)` values
+            to the device instead of the whole `n_query x n_ref` plan.
+            """
+            block = tran[j][np.ix_(idx_q, idx_r)]
+            return torch.from_numpy(block).to(device)
+
+        def _slice_prior(j, idx_q, idx_r):
+            """Mini-batch block of the prior, gathered without a full-width temporary.
+
+            Callers keep the result per query domain. The previous code held a
+            single `Prior_batch` variable that the domain loop overwrote, so with
+            more than two domains every domain's OT used the *last* domain's
+            prior block -- a shape mismatch whenever the two query domains
+            contributed different cell counts, and the wrong prior when they
+            happened to match.
+            """
+            iq = torch.as_tensor(idx_q, dtype=torch.long)
+            ir = torch.as_tensor(idx_r, dtype=torch.long)
+            return Prior[j][iq.unsqueeze(1), ir.unsqueeze(0)].to(device)
+
+        with tqdm(range(n_epoch), total=n_epoch, desc='Epochs') as tq:
             for epoch in tq:
 
                 tk0 = tqdm(enumerate(dataloader), total=len(dataloader), leave=False, desc='Iterations', disable=(not verbose))
-                epoch_loss = defaultdict(float)
+                # Accumulate on the device in float64 and read back once per
+                # epoch: calling .item() per loss per iteration forced three
+                # host/device synchronisations on every step.
+                epoch_loss = defaultdict(lambda: torch.zeros((), dtype=torch.float64, device=device))
+                i = -1
 
                 if mode == 'v':
 
                     for i, (x, idx) in tk0:
-                        x = x.float().to(device)
-                        idx = idx.to(device)
+                        x = x.to(device, non_blocking=True).float()
 
-                        x_list = []
-                        num_sum = []
-                        num_sum.append(num_gene[0])
-                        x_list.append(x[:, 0:num_sum[0]])
-
-                        for j in range(1, self.n_domain):
-                            num_sum.append(num_sum[-1] + num_gene[j])
-                            x_list.append(x[:, num_sum[-2]:num_sum[-1]])
-
-                        recon_loss = torch.tensor(0.0).to(device)
-                        kl_loss = torch.tensor(0.0).to(device)
+                        x_list = [x[:, bounds[j]:bounds[j+1]] for j in range(self.n_domain)]
 
                         z, mu, var = self.encoder(x_list[0], 0)
-                        kl_loss += kl_div(mu, var) 
+                        kl_loss = kl_div(mu, var)
                         recon = self.decoder(z, 0)
                         recon_loss = loss_func(recon, x_list[0]) * 2000
 
@@ -302,148 +341,148 @@ class VAE(nn.Module):
 
                             recon = self.decoder(z, j)
                             recon_loss += lambda_s * loss_func(recon, x_list[j]) * 2000   ## TO DO
-                    
-                        loss = {'recon_loss':lambda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss} 
 
-                        optim.zero_grad()
+                        loss = {'recon_loss':lambda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss}
+
+                        optim.zero_grad(set_to_none=True)
                         sum(loss.values()).backward()
                         optim.step()
-                        
-                        for k,v in loss.items():
-                            epoch_loss[k] += loss[k].item()
-                            
-                        info = ','.join(['{}={:.3f}'.format(k, v) for k,v in loss.items()])
-                        tk0.set_postfix_str(info)
-                    
 
-                    epoch_loss = {k:v/(i+1) for k, v in epoch_loss.items()}
+                        for k,v in loss.items():
+                            epoch_loss[k] += v.detach().double()
+
+                        if verbose:
+                            tk0.set_postfix_str(','.join('{}={:.3f}'.format(k, v) for k,v in loss.items()))
+
+                    epoch_loss = {k:(v/(i+1)).item() for k, v in epoch_loss.items()}
                     epoch_info = ','.join(['{}={:.3f}'.format(k, v) for k,v in epoch_loss.items()])
-                    tq.set_postfix_str(epoch_info) 
+                    tq.set_postfix_str(epoch_info)
 
 
                 elif mode == 'd':
 
                     for i, (x,y,idx) in tk0:
 
-                        x, y = x.float().to(device), y.long().to(device)    
-                        idx = idx.to(device)
+                        x = x.to(device, non_blocking=True).float()
+                        y = y.to(device, non_blocking=True).long()
+                        idx = idx.to(device, non_blocking=True)
 
                         if len(torch.unique(y)) < self.n_domain:
                             continue
 
                         mu_dict = {}
                         var_dict = {}
-                               
+
                         loc_ref = torch.where(y==self.ref_id)[0]
-                        idx_ref = idx[loc_ref] - sum(num_cell[0:self.ref_id])
+                        idx_ref = idx[loc_ref] - offsets[self.ref_id]
+                        idx_ref_host = idx_ref.cpu().numpy() if (save_OT or Prior is not None) else None
 
                         loc_query = {}
                         idx_query = {}
                         tran_batch = {}
-                        Prior_batch = None
-
-                        query_id = list(range(self.n_domain))
-                        query_id.remove(self.ref_id)
+                        Prior_batch = {}
 
                         for j in query_id:
 
                             loc_query[j] = torch.where(y==j)[0]
-                            idx_query[j] = idx[loc_query[j]] - sum(num_cell[0:j])
+                            idx_query[j] = idx[loc_query[j]] - offsets[j]
 
                             if save_OT:
-                                tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][:,idx_ref]
+                                idx_q_host = idx_query[j].cpu().numpy()
+                                tran_batch[j] = _slice_tran(j, idx_q_host, idx_ref_host)
                             else:
                                 tran_batch[j] = None
 
-                            if Prior is not None:
-                                Prior_batch = Prior[j][idx_query[j]][:,idx_ref].to(device)
+                            Prior_batch[j] = None if Prior is None else \
+                                _slice_prior(j, idx_query[j].cpu().numpy(), idx_ref_host)
 
-                        recon_loss = torch.tensor(0.0).to(device)
-                        kl_loss = torch.tensor(0.0).to(device)
-                        ot_loss = torch.tensor(0.0).to(device)
+                        recon_loss = torch.zeros((), device=device)
+                        kl_loss = torch.zeros((), device=device)
+                        ot_loss = torch.zeros((), device=device)
 
                         loc = loc_query
                         loc[self.ref_id] = loc_ref
 
                         for j in range(self.n_domain):
 
-                            z_j, mu_j, var_j = self.encoder(x[loc[j]][:, 0:num_gene[j]], j)
+                            # Gather the domain's rows once; the original
+                            # indexed `x[loc[j]]` three times per domain.
+                            x_j = x[loc[j]][:, 0:num_gene[j]]
+                            z_j, mu_j, var_j = self.encoder(x_j, j)
                             mu_dict[j] = mu_j
                             var_dict[j] = var_j
                             recon_j = self.decoder(z_j, j)
 
-                            recon_loss += loss_func(recon_j, x[loc[j]][:, 0:num_gene[j]]) * x[loc[j]].size(-1)  ## TO DO
-                            kl_loss += kl_div(mu_j, var_j) 
+                            recon_loss += loss_func(recon_j, x_j) * x.size(-1)  ## TO DO
+                            kl_loss += kl_div(mu_j, var_j)
 
                         for j in query_id:
 
                             ot_loss_tmp, tran_batch[j] = unbalanced_ot(tran_batch[j], mu_dict[j], var_dict[j], \
-                                mu_dict[self.ref_id].detach(), var_dict[self.ref_id].detach(), Couple=Prior_batch, device=device)
+                                mu_dict[self.ref_id].detach(), var_dict[self.ref_id].detach(), Couple=Prior_batch[j], device=device)
 
                             if save_OT:
-                                t0 = np.repeat(idx_query[j].cpu().numpy(), len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
-                                t1 = np.tile(idx_ref.cpu().numpy(), (len(idx_query[j]), 1))
-                                tran[j][t0,t1] = tran_batch[j].cpu().numpy()
+                                tran[j][np.ix_(idx_query[j].cpu().numpy(), idx_ref_host)] = tran_batch[j].cpu().numpy()
 
                             ot_loss += ot_loss_tmp
 
-                        loss = {'recon_loss':lambda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':lambda_ot*ot_loss} 
+                        loss = {'recon_loss':lambda_recon*recon_loss, 'kl_loss':lambda_kl*kl_loss, 'ot_loss':lambda_ot*ot_loss}
 
-                        optim.zero_grad()
+                        optim.zero_grad(set_to_none=True)
                         sum(loss.values()).backward()
                         optim.step()
-          
-                        for k,v in loss.items():
-                            epoch_loss[k] += loss[k].item()
-                            
-                        info = ','.join(['{}={:.3f}'.format(k, v) for k,v in loss.items()])
-                        tk0.set_postfix_str(info)
 
-                    epoch_loss = {k:v/(i+1) for k, v in epoch_loss.items()}
+                        for k,v in loss.items():
+                            epoch_loss[k] += v.detach().double()
+
+                        if verbose:
+                            tk0.set_postfix_str(','.join('{}={:.3f}'.format(k, v) for k,v in loss.items()))
+
+                    epoch_loss = {k:(v/(i+1)).item() for k, v in epoch_loss.items()}
                     epoch_info = ','.join(['{}={:.3f}'.format(k, v) for k,v in epoch_loss.items()])
-                    tq.set_postfix_str(epoch_info) 
+                    tq.set_postfix_str(epoch_info)
 
 
                 elif mode == 'h':
 
                     for i, (x, y, idx) in tk0:
 
-                        x_c, y = x[:, 0:num_gene[self.n_domain]].float().to(device), y.long().to(device)  
-                        idx = idx.to(device)
-                                                    
+                        # One host->device transfer for the whole row; the
+                        # common and specific blocks are sliced on the device.
+                        x = x.to(device, non_blocking=True).float()
+                        y = y.to(device, non_blocking=True).long()
+                        idx = idx.to(device, non_blocking=True)
+
+                        x_c = x[:, 0:num_gene[self.n_domain]].contiguous()
+
                         loc_ref = torch.where(y==self.ref_id)[0]
 
-                        idx_ref = idx[loc_ref] - sum(num_cell[0:self.ref_id])
+                        idx_ref = idx[loc_ref] - offsets[self.ref_id]
+                        idx_ref_host = idx_ref.cpu().numpy() if (save_OT or Prior is not None) else None
 
                         loc_query = {}
                         idx_query = {}
                         tran_batch = {}
-                        Prior_batch = None
+                        Prior_batch = {}
 
-                        query_id = list(range(self.n_domain))
-                        query_id.remove(self.ref_id)
+                        for j in query_id:
+
+                            loc_query[j] = torch.where(y==j)[0]
+                            idx_query[j] = idx[loc_query[j]] - offsets[j]
+                            tran_batch[j] = None
+                            Prior_batch[j] = None
 
                         if len(loc_ref) > 0:
                             for j in query_id:
 
-                                loc_query[j] = torch.where(y==j)[0]
-                                idx_query[j] = idx[loc_query[j]] - sum(num_cell[0:j])
-
-                                if save_OT:
-                                    if len(idx_query[j]) != 0:
-                                        if (len(idx_query[j])) == 1:
-                                            tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][idx_ref]
-                                        else:
-                                            tran_batch[j] = torch.from_numpy(tran[j]).to(device)[idx_query[j]][:,idx_ref]
-                                else:
-                                    tran_batch[j] = None
+                                if save_OT and len(idx_query[j]) != 0:
+                                    tran_batch[j] = _slice_tran(j, idx_query[j].cpu().numpy(), idx_ref_host)
 
                                 if Prior is not None:
-                                    Prior_batch = Prior[j][idx_query[j]][:,idx_ref].to(device)
+                                    Prior_batch[j] = _slice_prior(j, idx_query[j].cpu().numpy(), idx_ref_host)
 
-                        ot_loss = torch.tensor(0.0).to(device)
-                        recon_loss = torch.tensor(0.0).to(device)
-                        kl_loss = torch.tensor(0.0).to(device)
+                        ot_loss = torch.zeros((), device=device)
+                        recon_loss = torch.zeros((), device=device)
 
                         loc = loc_query
                         loc[self.ref_id] = loc_ref
@@ -451,8 +490,8 @@ class VAE(nn.Module):
                         idx[self.ref_id] = idx_ref
 
                         z, mu, var = self.encoder(x_c, 0)
-                        recon_x_c = self.decoder(z, 0, y)        
-   
+                        recon_x_c = self.decoder(z, 0, y)
+
                         if label_weight is None:
                             recon_loss = loss_func(recon_x_c, x_c) * 2000
                         else:
@@ -462,25 +501,24 @@ class VAE(nn.Module):
                                     if weight is None:
                                         recon_loss += 1/self.n_domain * loss_func(recon_x_c[loc[j]], x_c[loc[j]]) * \
                                         2000
-                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]])                               
+                                        # kl_loss += kl_div(mu[loc[j]], var[loc[j]])
                                     else:
-                                        weight = weight.to(device)
                                         recon_loss += 1/self.n_domain * F.binary_cross_entropy(recon_x_c[loc[j]], x_c[loc[j]], weight=weight[idx[j]]) * \
                                         2000
                                         # kl_loss += kl_div(mu[loc[j]], var[loc[j]], weight[idx[j]])
 
-                        kl_loss = kl_div(mu, var) 
+                        kl_loss = kl_div(mu, var)
                         if use_specific:
 
-                            x_s = x[:, num_gene[self.n_domain]:].float().to(device)
+                            x_s = x[:, num_gene[self.n_domain]:]
 
                             for j in range(self.n_domain):
                                 if len(loc[j])>0:
                                     recon_x_s = self.decoder(z[loc[j]], j+1)
                                     recon_loss += lambda_s * loss_func(recon_x_s, x_s[loc[j]][:, 0:num_gene[j]]) * 2000
-                        
+
                         if len(torch.unique(y))>1 and len(loc[self.ref_id])!=0:
-                            
+
                             mu_dict = {}
                             var_dict = {}
 
@@ -489,70 +527,56 @@ class VAE(nn.Module):
                                     mu_dict[j] = mu[loc[j]]
                                     var_dict[j] = var[loc[j]]
 
+                            mu_ref = mu_dict[self.ref_id].detach()
+                            var_ref = var_dict[self.ref_id].detach()
+
                             for j in query_id:
                                 if len(loc[j])>0:
 
-                                    if label_weight is None:
+                                    ot_kwargs = {}
+                                    if label_weight is not None:
+                                        ot_kwargs['query_weight'] = label_weight[j]
+                                        ot_kwargs['ref_weight'] = label_weight[self.ref_id]
 
-                                        ot_loss_tmp, tran_batch[j] = unbalanced_ot(
-                                            tran_batch[j],
-                                            mu_dict[j], 
-                                            var_dict[j], 
-                                            mu_dict[self.ref_id].detach(), 
-                                            var_dict[self.ref_id].detach(), 
-                                            reg=reg,
-                                            reg_m=reg_m,
-                                            idx_q=idx_query[j],
-                                            idx_r=idx_ref,
-                                            Couple=Prior_batch, 
-                                            device=device,
-                                        )
-
-                                    else:
-
-                                        ot_loss_tmp, tran_batch[j] = unbalanced_ot(
-                                            tran_batch[j],
-                                            mu_dict[j], 
-                                            var_dict[j], 
-                                            mu_dict[self.ref_id].detach(), 
-                                            var_dict[self.ref_id].detach(), 
-                                            reg=reg,
-                                            reg_m=reg_m,
-                                            idx_q=idx_query[j],
-                                            idx_r=idx_ref,
-                                            Couple=Prior_batch, 
-                                            device=device,
-                                            query_weight=label_weight[j],
-                                            ref_weight=label_weight[self.ref_id],
-                                        )
+                                    ot_loss_tmp, tran_batch[j] = unbalanced_ot(
+                                        tran_batch[j],
+                                        mu_dict[j],
+                                        var_dict[j],
+                                        mu_ref,
+                                        var_ref,
+                                        reg=reg,
+                                        reg_m=reg_m,
+                                        idx_q=idx_query[j],
+                                        idx_r=idx_ref,
+                                        Couple=Prior_batch[j],
+                                        device=device,
+                                        **ot_kwargs,
+                                    )
 
                                     if save_OT:
-                                        t0 = np.repeat(idx_query[j].cpu().numpy(), len(idx_ref)).reshape(len(idx_query[j]),len(idx_ref))
-                                        t1 = np.tile(idx_ref.cpu().numpy(), (len(idx_query[j]), 1))
-                                        tran[j][t0,t1] = tran_batch[j].cpu().numpy()
+                                        tran[j][np.ix_(idx_query[j].cpu().numpy(), idx_ref_host)] = tran_batch[j].cpu().numpy()
 
                                     ot_loss += ot_loss_tmp
-   
-                        loss = {'recloss':lambda_recon*recon_loss, 'klloss':lambda_kl*kl_loss, 'otloss':lambda_ot*ot_loss} 
-                        
-                        optim.zero_grad()
+
+                        loss = {'recloss':lambda_recon*recon_loss, 'klloss':lambda_kl*kl_loss, 'otloss':lambda_ot*ot_loss}
+
+                        optim.zero_grad(set_to_none=True)
                         sum(loss.values()).backward()
                         optim.step()
 
                         for k,v in loss.items():
-                            epoch_loss[k] += loss[k].item()
+                            epoch_loss[k] += v.detach().double()
 
-                        info = ','.join(['{}={:.2f}'.format(k, v) for k,v in loss.items()])
-                        tk0.set_postfix_str(info)
+                        if verbose:
+                            tk0.set_postfix_str(','.join('{}={:.2f}'.format(k, v) for k,v in loss.items()))
 
-                    
-                    epoch_loss = {k:v/(i+1) for k, v in epoch_loss.items()}
+
+                    epoch_loss = {k:(v/(i+1)).item() for k, v in epoch_loss.items()}
 
                     epoch_info = ','.join(['{}={:.2f}'.format(k, v) for k,v in epoch_loss.items()])
-                    tq.set_postfix_str(epoch_info) 
-                        
+                    tq.set_postfix_str(epoch_info)
+
                     early_stopping(sum(epoch_loss.values()), self)
                     if early_stopping.early_stop:
                         print('EarlyStopping: run {} epoch'.format(epoch+1))
-                        break    
-                                                      
+                        break

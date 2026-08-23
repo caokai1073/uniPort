@@ -1,51 +1,104 @@
-#!/usr/bin/env 
+#!/usr/bin/env
 """
 # Author: Kai Cao
 # Modified from SCALEX
 """
 
 import numpy as np
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+import torch
+from torch.utils.data import BatchSampler, DataLoader, Dataset
+from torch.utils.data import RandomSampler, SequentialSampler
 from scipy.sparse import issparse
-import scipy
+
+__all__ = ['SingleCellDataset', 'SingleCellDataset_vertical', 'load_data']
+
+
+def _to_dense_f32(x):
+    """Densify (if needed) and cast to float32.
+
+    The training loop casts every mini batch with ``.float()`` anyway, so doing
+    it once up front is numerically identical while halving the memory held by
+    the dataset and removing a per-batch conversion.
+    """
+    if issparse(x):
+        x = x.toarray()
+    return np.asarray(x, dtype=np.float32)
+
+
+def _pad_genes(x, max_gene):
+    """Right-pad a cell x gene block with zero columns up to ``max_gene``."""
+    if max_gene is None or x.shape[1] >= max_gene:
+        return x
+    pad = np.zeros((x.shape[0], max_gene - x.shape[1]), dtype=np.float32)
+    return np.hstack((x, pad))
+
 
 class SingleCellDataset(Dataset):
 
     def __init__(self, data, batch):
-        
-        self.data = data
-        self.batch = batch
-        self.shape = data.shape
-        
+
+        self.data = torch.as_tensor(np.ascontiguousarray(_to_dense_f32(data)))
+        self.batch = torch.as_tensor(np.asarray(batch), dtype=torch.int64)
+        self.shape = tuple(self.data.shape)
+
     def __len__(self):
         return self.data.shape[0]
-    
+
     def __getitem__(self, idx):
+        # ``idx`` is a whole batch of indices when the loader is built by
+        # ``load_data`` (see the BatchSampler there); the single-index form is
+        # kept working so the dataset stays usable on its own.
+        index = torch.as_tensor(idx) if isinstance(idx, (list, np.ndarray)) else idx
 
-        domain_id = self.batch[idx]
-        x = self.data[idx].squeeze()
+        return self.data[index], self.batch[index], index
 
-        return x, domain_id, idx
 
 class SingleCellDataset_vertical(Dataset):
 
     def __init__(self, adatas):
 
-        self.adatas = adatas
-        
+        # One tensor per modality rather than one pre-concatenated copy. For a
+        # dense float32 ``.X`` this shares memory with the AnnData array, so
+        # nothing is duplicated (concatenating up front would double the
+        # footprint of an already large vertical dataset), and the per-batch
+        # torch.cat is still one vectorised op instead of one np.concatenate
+        # per sample. Sparse matrices are densified here, which slicing
+        # ``adata.X`` directly could not handle at all.
+        self.data = [torch.as_tensor(_to_dense_f32(adata.X)) for adata in adatas]
+        self.shape = (self.data[0].shape[0], sum(int(d.shape[1]) for d in self.data))
+
     def __len__(self):
-        return self.adatas[0].shape[0]
-    
+        return self.data[0].shape[0]
+
     def __getitem__(self, idx):
+        index = torch.as_tensor(idx) if isinstance(idx, (list, np.ndarray)) else idx
 
-        x = self.adatas[0].X[idx].squeeze()
+        return torch.cat([d[index] for d in self.data], dim=-1), index
 
-        for i in range(1, len(self.adatas)):
 
-            x = np.concatenate((x, self.adatas[i].X[idx].squeeze()))
+def _make_loader(scdata, batch_size, drop_last, shuffle, num_workers):
+    """DataLoader that gathers a whole mini batch in one indexing operation.
 
-        return x, idx
+    ``batch_size=None`` turns off the automatic collation, so the dataset gets
+    the full list of indices and can slice the underlying tensor once instead of
+    materialising ``batch_size`` python objects and stacking them. The sampler
+    is the same ``BatchSampler(RandomSampler(...))`` that ``DataLoader`` would
+    build internally, so the mini batches are identical.
+    """
+    sampler = RandomSampler(scdata) if shuffle else SequentialSampler(scdata)
+
+    # Note: no persistent_workers. It would avoid respawning workers each epoch,
+    # but it also changes how many values the loader draws from the global torch
+    # RNG per epoch, which would silently change the shuffling (and therefore
+    # every downstream result) relative to previous releases.
+    return DataLoader(
+        scdata,
+        batch_size=None,
+        sampler=BatchSampler(sampler, batch_size=batch_size, drop_last=drop_last),
+        num_workers=num_workers,
+        pin_memory=torch.cuda.is_available(),
+    )
+
 
 def load_data(adatas, mode='h', use_rep=['X', 'X'], max_gene=None, adata_cm=None, use_specific=False, domain_name='domain_id', batch_size=256, \
     drop_last=True, shuffle=True, num_workers=4):
@@ -61,8 +114,6 @@ def load_data(adatas, mode='h', use_rep=['X', 'X'], max_gene=None, adata_cm=None
         training mode. Choose between ['h', 'd', 'v'].
     use_rep
         use '.X' or '.obsm'.
-    num_cell
-        numbers of cells of each adata in adatas.
     max_gene
         maximum number of genes of each adata in adatas.
     adata_cm
@@ -89,59 +140,41 @@ def load_data(adatas, mode='h', use_rep=['X', 'X'], max_gene=None, adata_cm=None
     '''
 
     if mode == 'd':
+        blocks = []
+        batches = []
         for i, adata in enumerate(adatas):
-            if use_rep[i] == 'X':
-                tmp = adata.X.toarray() if issparse(adata.X) else adata.X
-            else:
-                tmp = adata.obsm[use_rep[i]]
+            rep = adata.X if use_rep[i] == 'X' else adata.obsm[use_rep[i]]
+            blocks.append(_pad_genes(_to_dense_f32(rep), max_gene))
+            batches.append(np.asarray(adata.obs[domain_name].astype(int)))
 
-            # 如果基因数小于 max_gene，使用 0 进行补齐
-            if tmp.shape[1] < max_gene:
-                tmp = np.hstack((tmp, np.zeros((tmp.shape[0], max_gene - tmp.shape[1]))))
-
-            if i == 0:
-                x = tmp
-                batches = adata.obs[domain_name].astype(int).tolist()
-            else:
-                x = np.vstack((x, tmp))
-                batches.extend(adata.obs[domain_name].astype(int).tolist())
+        x = np.vstack(blocks) if len(blocks) > 1 else blocks[0]
+        batches = np.concatenate(batches)
 
         scdata = SingleCellDataset(x, batches)
 
     elif mode == 'h':
-        batches = adata_cm.obs[domain_name].cat.categories.tolist()
+        domains = adata_cm.obs[domain_name].cat.categories.tolist()
 
         if use_specific:
+            blocks = []
             for i, adata in enumerate(adatas):
-                adata_tmp = adata_cm[adata_cm.obs[domain_name] == batches[i]]
+                adata_tmp = adata_cm[adata_cm.obs[domain_name] == domains[i]]
 
-                x_c = adata_tmp.X.toarray() if issparse(adata_tmp.X) else adata_tmp.X
-                x_s = adata.X.toarray() if issparse(adata.X) else adata.X
+                x_c = _to_dense_f32(adata_tmp.X)
+                x_s = _pad_genes(_to_dense_f32(adata.X), max_gene)
 
-                if x_s.shape[1] < max_gene:
-                    x_s = np.hstack((x_s, np.zeros((x_s.shape[0], max_gene - x_s.shape[1]))))
-
-                if i == 0:
-                    x = np.hstack((x_c, x_s))
-                else:
-                    x = np.vstack((x, np.hstack((x_c, x_s))))
+                blocks.append(np.hstack((x_c, x_s)))
+            x = np.vstack(blocks) if len(blocks) > 1 else blocks[0]
         else:
-            x = adata_cm.X.toarray() if issparse(adata_cm.X) else adata_cm.X
+            x = _to_dense_f32(adata_cm.X)
 
-        scdata = SingleCellDataset(x, adata_cm.obs[domain_name].astype(int).tolist())
+        scdata = SingleCellDataset(x, np.asarray(adata_cm.obs[domain_name].astype(int)))
 
     else:
         scdata = SingleCellDataset_vertical(adatas)
 
     # DataLoader for train and test
-    trainloader = DataLoader(
-        scdata,
-        batch_size=batch_size,
-        drop_last=drop_last,
-        shuffle=shuffle,
-        num_workers=num_workers,
-    )
-
-    testloader = DataLoader(scdata, batch_size=batch_size, drop_last=False, shuffle=False)
+    trainloader = _make_loader(scdata, batch_size, drop_last, shuffle, num_workers)
+    testloader = _make_loader(scdata, batch_size, False, False, 0)
 
     return trainloader, testloader

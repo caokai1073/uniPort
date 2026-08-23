@@ -6,11 +6,13 @@
 
 import numpy as np
 import scipy
-from sklearn.neighbors import NearestNeighbors, KNeighborsRegressor
-from sklearn.metrics import silhouette_samples, silhouette_score
+from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import silhouette_score
+
+__all__ = ['batch_entropy_mixing_score', 'silhouette', 'label_transfer']
 
 
-def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_samples_per_pool=100):
+def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_samples_per_pool=100, n_jobs=-1):
     """
     Calculate batch entropy mixing score
     
@@ -33,43 +35,55 @@ def batch_entropy_mixing_score(data, batches, n_neighbors=100, n_pools=100, n_sa
         The number of randomly chosen cells from all batches per iteration. By default, n_samples_per_pool=100.
     n_pools
         The number of iterations with different randomly chosen cells. By default, n_pools=100.
-        
+    n_jobs
+        Number of parallel jobs for the nearest-neighbor search. By default, n_jobs=-1 (all cores).
+
     Returns
     -------
     Batch entropy mixing score
     """
 #     print("Start calculating Entropy mixing score")
-    def entropy(batches):
-        p = np.zeros(N_batches)
-        adapt_p = np.zeros(N_batches)
+    def entropy(counts):
+        # `counts[i]` is how many of the cell's neighbours belong to batch i, so
+        # the batch frequencies come straight out of a bincount instead of one
+        # full pass over the neighbour labels per batch.
+        p = counts / counts.sum()
         a = 0
         for i in range(N_batches):
-            p[i] = np.mean(batches == batches_[i])
             a = a + p[i]/P[i]
         entropy = 0
         for i in range(N_batches):
-            adapt_p[i] = (p[i]/P[i])/a
-            entropy = entropy - adapt_p[i]*np.log(adapt_p[i]+10**-8)
+            adapt_p = (p[i]/P[i])/a
+            entropy = entropy - adapt_p*np.log(adapt_p+10**-8)
         return entropy
 
     n_neighbors = min(n_neighbors, len(data) - 1)
-    nne = NearestNeighbors(n_neighbors=1 + n_neighbors, n_jobs=8)
+    nne = NearestNeighbors(n_neighbors=1 + n_neighbors, n_jobs=n_jobs)
     nne.fit(data)
     kmatrix = nne.kneighbors_graph(data) - scipy.sparse.identity(data.shape[0])
 
     score = 0
-    batches_ = np.unique(batches)
+    batches = np.asarray(batches)
+    batches_, batch_codes = np.unique(batches, return_inverse=True)
     N_batches = len(batches_)
     if N_batches < 2:
         raise ValueError("Should be more than one cluster for batch mixing")
-    P = np.zeros(N_batches)
-    for i in range(N_batches):
-            P[i] = np.mean(batches == batches_[i])
+    P = np.bincount(batch_codes, minlength=N_batches) / len(batch_codes)
+
     for t in range(n_pools):
         indices = np.random.choice(np.arange(data.shape[0]), size=n_samples_per_pool)
-        score += np.mean([entropy(batches[kmatrix[indices].nonzero()[1]
-                                                 [kmatrix[indices].nonzero()[0] == i]])
-                          for i in range(n_samples_per_pool)])
+        # One nonzero() pass per pool. The original called it twice for each of
+        # the `n_samples_per_pool` cells, i.e. 2 x n_samples_per_pool full scans
+        # of the same sliced matrix on every iteration.
+        rows, cols = kmatrix[indices].nonzero()
+        # nonzero() emits entries in row-major order, so each row is one slice.
+        row_start = np.searchsorted(rows, np.arange(n_samples_per_pool), side='left')
+        row_end = np.searchsorted(rows, np.arange(n_samples_per_pool), side='right')
+        neighbor_codes = batch_codes[cols]
+        score += np.mean([
+            entropy(np.bincount(neighbor_codes[row_start[i]:row_end[i]], minlength=N_batches))
+            for i in range(n_samples_per_pool)
+        ])
     Score = score / float(n_pools)
     return Score / float(np.log2(N_batches))
 
@@ -126,7 +140,7 @@ def label_transfer(ref, query, rep='latent', label='celltype'):
     y_train = ref.obs[label]
     X_test = query.obsm[rep]
     
-    knn = knn = KNeighborsClassifier().fit(X_train, y_train)
+    knn = KNeighborsClassifier(n_jobs=-1).fit(X_train, y_train)
     y_test = knn.predict(X_test)
     
     return y_test

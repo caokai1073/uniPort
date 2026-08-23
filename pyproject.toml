@@ -1,8 +1,52 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
+requires = ["flit_core >=3.9,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
 name = "uniPort"
 authors = [{name = "Kai Cao", email = "caokai@amss.ac.cn"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
 dynamic = ["version", "description"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.9",
+    "pandas>=1.5",
+    "scikit-learn>=1.1",
+    "torch>=2.0",
+    "anndata>=0.8",
+    "scanpy>=1.9",
+    "tqdm>=4.60",
+]
+
+# Only needed to re-run the example notebooks, not by the library itself.
+[project.optional-dependencies]
+examples = [
+    "matplotlib>=3.5",
+    "seaborn>=0.12",
+    "leidenalg>=0.9",
+    "episcanpy>=0.4",
+]
+docs = [
+    "sphinx>=5",
+    "sphinx_autodoc_typehints",
+    "sphinx-copybutton",
+    "sphinx-markdown-tables>=0.0.15",
+    "nbsphinx",
+    "myst_parser",
+]
+
+[project.urls]
+Home = "https://github.com/caokai1073/uniPort"
+Documentation = "https://uniport.readthedocs.io"
+
+# The distribution is named uniPort but the importable module is lowercase;
+# without this flit cannot find it on case-sensitive filesystems.
+[tool.flit.module]
+name = "uniport"

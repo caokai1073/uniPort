@@ -4,16 +4,13 @@
 # Modified from SCALEX
 """
 
-import math
 import numpy as np
 
 import torch
 from torch import nn as nn
-import torch.nn.functional as F
 from torch.distributions import Normal
-from torch.nn.parameter import Parameter
-from torch.nn import init
-from torch.autograd import Function
+
+__all__ = ['activation', 'DSBatchNorm', 'Block', 'NN', 'Encoder', 'Decoder']
 
 
 activation = {
@@ -56,16 +53,21 @@ class DSBatchNorm(nn.Module):
         raise NotImplementedError
             
     def forward(self, x, y):
-        out = torch.zeros(x.size(0), self.num_features, device=x.device) #, requires_grad=False)
+        out = torch.zeros(x.size(0), self.num_features, dtype=x.dtype, device=x.device)
+        # Pull the domain labels back to the host exactly once. Doing the
+        # `np.where` per domain (as before) costs one device synchronisation per
+        # domain on every forward pass, which dominates small-batch training.
+        y_host = y.detach().to('cpu', non_blocking=False).numpy()
         for i in range(self.n_domain):
-            indices = np.where(y.cpu().numpy()==i)[0]
+            indices = np.flatnonzero(y_host == i)
 
             if len(indices) > 1:
-                out[indices] = self.bns[i](x[indices])
+                index = torch.as_tensor(indices, device=x.device)
+                out[index] = self.bns[i](x[index])
             elif len(indices) == 1:
-                # out[indices] = x[indices]
+                index = torch.as_tensor(indices, device=x.device)
                 self.bns[i].training = False
-                out[indices] = self.bns[i](x[indices])
+                out[index] = self.bns[i](x[index])
                 self.bns[i].training = True
         return out
         
@@ -109,7 +111,9 @@ class Block(nn.Module):
         super().__init__()
         self.fc = nn.Linear(input_dim, output_dim)
         
-        if type(norm) == int:
+        # bool is a subclass of int, but `type(norm) == int` never matched it,
+        # so a bool in a user-supplied config must keep meaning "no norm".
+        if isinstance(norm, int) and not isinstance(norm, bool):
             if norm==1: # TO DO
                 self.norm = nn.BatchNorm1d(output_dim)
             else:

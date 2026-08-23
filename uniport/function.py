@@ -7,10 +7,10 @@ import torch
 import numpy as np
 
 import os
+import anndata
 import scanpy as sc
 from anndata import AnnData
 import scipy
-import sklearn
 import pandas as pd
 from scipy.sparse import issparse
 
@@ -18,12 +18,13 @@ from .model.vae import VAE
 from .model.utils import EarlyStopping
 from .logger import create_logger
 from .data_loader import load_data
-from .metrics import *
 
-from anndata import AnnData
 from sklearn.preprocessing import MaxAbsScaler
 
 from glob import glob
+
+__all__ = ['read_mtx', 'load_file', 'tfidf', 'TFIDF_LSI', 'filter_data',
+           'batch_scale', 'get_prior', 'label_reweight', 'Run']
 
 DATA_PATH = os.path.expanduser("~")+'/.uniport/'
 CHUNK_SIZE = 20000
@@ -84,7 +85,11 @@ def load_file(path):
             adata = sc.read_csv(path).T
         elif path.endswith(('.txt', '.txt.gz', '.tsv', '.tsv.gz')):
             df = pd.read_csv(path, sep='\t', index_col=0).T
-            adata = AnnData(df.values, dict(obs_names=df.index.values), dict(var_names=df.columns.values))
+            adata = AnnData(
+                df.values,
+                obs=pd.DataFrame(index=df.index.values),
+                var=pd.DataFrame(index=df.columns.values),
+            )
         elif path.endswith('.h5ad'):
             adata = sc.read_h5ad(path)
     else:
@@ -96,22 +101,32 @@ def load_file(path):
     return adata
 
 def tfidf(X, n_components, binarize=True, random_state=0):
+    from sklearn.decomposition import TruncatedSVD
     from sklearn.feature_extraction.text import TfidfTransformer
-    
-    sc_count = np.copy(X)
-    if binarize:
-        sc_count = np.where(sc_count < 1, sc_count, 1)
-    
+
+    # TfidfTransformer and TruncatedSVD both accept sparse input, so a sparse
+    # count matrix never has to be densified here (scATAC peak matrices are
+    # typically >99% zeros).
+    if issparse(X):
+        sc_count = X.copy()
+        if binarize:
+            sc_count.data = np.where(sc_count.data < 1, sc_count.data, 1)
+    else:
+        sc_count = np.copy(X)
+        if binarize:
+            sc_count = np.where(sc_count < 1, sc_count, 1)
+
     tfidf = TfidfTransformer(norm='l2', sublinear_tf=True)
     normed_count = tfidf.fit_transform(sc_count)
 
-    lsi = sklearn.decomposition.TruncatedSVD(n_components=n_components, random_state=random_state)
+    lsi = TruncatedSVD(n_components=n_components, random_state=random_state)
     lsi_r = lsi.fit_transform(normed_count)
-    
+
     X_lsi = lsi_r[:,1:]
 
     return X_lsi
-    
+
+
 def TFIDF_LSI(adata, n_comps=50, binarize=True, random_state=0):
     '''
     Computes LSI based on a TF-IDF transformation of the data from MultiMap. Putative dimensionality 
@@ -131,10 +146,7 @@ def TFIDF_LSI(adata, n_comps=50, binarize=True, random_state=0):
     '''
     
     #this is just a very basic wrapper for the non-adata function
-    if scipy.sparse.issparse(adata.X):
-        adata.obsm['X_lsi'] = tfidf(adata.X.todense(), n_components=n_comps, binarize=binarize, random_state=random_state)
-    else:
-        adata.obsm['X_lsi'] = tfidf(adata.X, n_components=n_comps, binarize=binarize, random_state=random_state)
+    adata.obsm['X_lsi'] = tfidf(adata.X, n_components=n_comps, binarize=binarize, random_state=random_state)
 
 def filter_data(
         adata: AnnData,
@@ -174,19 +186,21 @@ def batch_scale(adata, use_rep='X', chunk_size=CHUNK_SIZE):
     use_rep
         use '.X' or '.obsm'
     chunk_size
-        chunk large data into small chunks
-    
+        deprecated and ignored. Each batch is now scaled in a single pass; the
+        block was already materialised in full by the `fit` call, so chunking
+        the transform saved no memory and cost one fancy-index read plus one
+        fancy-index write per chunk (very slow on sparse matrices).
+
     """
-    for b in adata.obs['source'].unique():
-        idx = np.where(adata.obs['source']==b)[0]
+    source = np.asarray(adata.obs['source'])
+    for b in pd.unique(source):
+        idx = np.flatnonzero(source == b)
         if use_rep == 'X':
-            scaler = MaxAbsScaler(copy=False).fit(adata.X[idx])
-            for i in range(len(idx)//chunk_size+1):
-                adata.X[idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.X[idx[i*chunk_size:(i+1)*chunk_size]])
+            block = adata.X[idx]
+            adata.X[idx] = MaxAbsScaler(copy=False).fit_transform(block)
         else:
-            scaler = MaxAbsScaler(copy=False).fit(adata.obsm[use_rep][idx])
-            for i in range(len(idx)//chunk_size+1):
-                adata.obsm[use_rep][idx[i*chunk_size:(i+1)*chunk_size]] = scaler.transform(adata.obsm[use_rep][idx[i*chunk_size:(i+1)*chunk_size]])
+            block = adata.obsm[use_rep][idx]
+            adata.obsm[use_rep][idx] = MaxAbsScaler(copy=False).fit_transform(block)
 
 def get_prior(celltype1, celltype2, alpha=2):
 
@@ -208,14 +222,29 @@ def get_prior(celltype1, celltype2, alpha=2):
         a prior correspondence matrix between cells
     """
 
+    celltype1 = np.asarray(celltype1)
+    celltype2 = np.asarray(celltype2)
+
     Couple = alpha*torch.ones(len(celltype1), len(celltype2))
-    
-    for i in set(celltype1):
-        index1 = np.where(celltype1==i)
-        if i in set(celltype2):
-            index2 = np.where(celltype2==i)
-            for j in index1[0]:
-                Couple[j, index2[0]]=1/alpha
+
+    # One vectorised block assignment per shared label, instead of a python
+    # loop over every cell of dataset 1. factorize (not np.unique) keeps the
+    # original set-membership semantics: labels only need to be hashable, not
+    # mutually orderable.
+    codes1, labels1 = pd.factorize(celltype1, sort=False)
+    codes2, labels2 = pd.factorize(celltype2, sort=False)
+    where2 = {label: k for k, label in enumerate(labels2)}
+
+    order2 = np.argsort(codes2, kind='stable')
+    starts2 = np.searchsorted(codes2[order2], np.arange(len(labels2) + 1))
+
+    for k1, label in enumerate(labels1):
+        k2 = where2.get(label)
+        if k2 is None:
+            continue
+        index1 = np.flatnonzero(codes1 == k1)
+        index2 = order2[starts2[k2]:starts2[k2 + 1]]
+        Couple[np.ix_(index1, index2)] = 1/alpha
 
     return Couple
 
@@ -236,15 +265,12 @@ def label_reweight(celltype):
     """
 
     n = len(celltype)
-    unique, count = np.unique(celltype, return_counts=True)
-    p = torch.zeros(n,1)
+    # `return_inverse` maps every cell straight onto its label's count, which
+    # replaces one np.where scan over the label vector per cell.
+    unique, inverse, count = np.unique(np.asarray(celltype), return_inverse=True, return_counts=True)
+    p = torch.from_numpy(1/(len(unique)*count[np.ravel(inverse)])).float().reshape(n, 1)
 
-    for i in range(n):
-        idx = np.where(unique==celltype[i])[0]
-        tmp = 1/(len(unique)*count[idx])
-        p[i] = torch.from_numpy(tmp)
-
-    weights = p * len(celltype)
+    weights = p * n
 
     return weights
 
@@ -394,8 +420,8 @@ def Run(
     torch.manual_seed(seed)
 
     if torch.cuda.is_available(): # cuda device
-        device='cuda'
         torch.cuda.set_device(gpu)
+        device = 'cuda:{}'.format(gpu)
     else:
         device='cpu'
     
@@ -419,8 +445,13 @@ def Run(
 
     n_domain = len(adatas)
 
+    # `use_rep` defaults to a two-element list, so anything past the second
+    # dataset used to raise IndexError below. Fall back to '.X' for the rest.
+    if len(use_rep) < n_domain:
+        use_rep = list(use_rep) + ['X'] * (n_domain - len(use_rep))
+
     # give reference datasets
-    if ref_id is None:  
+    if ref_id is None:
         ref_id = n_domain-1
 
     tran = {}
@@ -525,23 +556,30 @@ def Run(
             verbose=verbose,
             loss_type=loss_type,
         )
-        torch.save({'enc':enc, 'dec':dec, 'n_domain':n_domain, 'ref_id':ref_id, 'num_gene':num_gene}, outdir+'/checkpoint/config.pt')     
+        # Early stopping (which writes model.pt) only runs in mode 'h', so for
+        # the other modes the weights were never persisted and a later
+        # out='project'/'predict' call could not find the checkpoint.
+        if mode != 'h':
+            torch.save(model.state_dict(), outdir+'/checkpoint/model.pt')
+
+        torch.save({'enc':enc, 'dec':dec, 'n_domain':n_domain, 'ref_id':ref_id, 'num_gene':num_gene}, outdir+'/checkpoint/config.pt')
 
 
     # project or predict
     else:
-        state = torch.load(outdir+'/checkpoint/config.pt')
+        state = torch.load(outdir+'/checkpoint/config.pt', map_location='cpu', weights_only=True)
         enc, dec, n_domain, ref_id, num_gene = state['enc'], state['dec'], state['n_domain'], state['ref_id'], state['num_gene']
         model = VAE(enc, dec, ref_id=ref_id, n_domain=n_domain, mode=mode)
         model.load_model(outdir+'/checkpoint/model.pt')
         model.to(device)
-        
+
         _, testloader = load_data(
-            adatas=adatas, 
-            max_gene=max(num_gene), 
-            adata_cm=adata_cm, 
+            adatas=adatas,
+            use_rep=use_rep,
+            max_gene=max(num_gene),
+            adata_cm=adata_cm,
             domain_name=batch_key,
-            batch_size=batch_size, 
+            batch_size=batch_size,
             mode=mode
         )
 
@@ -553,10 +591,17 @@ def Run(
         if out == 'latent' or out == 'project':
             for i in range(n_domain):
                 adatas[i].obsm[out] = model.encodeBatch(testloader, num_gene, batch_id=i, device=device, mode=mode, out=out)
-            for i in range(n_domain-1):
-                adata_concat = adatas[i].concatenate(adatas[i+1])
+            # `AnnData.concatenate` is deprecated, and the previous loop rebound
+            # `adata_concat` on every step, so with more than two datasets it
+            # returned only the last pair.
+            adata_concat = anndata.concat(
+                adatas, label='batch', keys=[str(i) for i in range(n_domain)], index_unique='-')
         elif out == 'predict':
             adatas[0].obsm[out] = model.encodeBatch(testloader, num_gene, batch_id=input_id, pred_id=pred_id, device=device, mode=mode, out=out)
+            # Only adatas[0] carries the prediction, and anndata.concat inner-joins
+            # obsm, so concatenating here would silently drop it. Return the
+            # predicted dataset itself, the way mode 'v' does.
+            adata_concat = adatas[0]
 
     elif mode == 'h':
         if out == 'latent' or out == 'project':
