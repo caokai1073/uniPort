@@ -2,10 +2,7 @@
 
 # -- Project information
 
-import inspect
 import uniport
-
-import sphinx_autodoc_typehints
 
 project = 'uniPort'
 copyright = u'2022, Kai Cao'
@@ -68,10 +65,13 @@ epub_show_urls = 'footnote'
 #     'preamble': '\\usepackage[UTF8]{ctex}\n',
 # }
 
-html_theme_options = dict(navigation_depth=4, logo_only=True)  # Only show the logo
+html_theme_options = dict(navigation_depth=4)
 
-from recommonmark.parser import CommonMarkParser
-source_parsers = {
-    '.md': CommonMarkParser,
+# Markdown is handled by myst_parser (listed in `extensions` above). The old
+# recommonmark hook that used to live here was never declared as a dependency
+# and recommonmark itself is deprecated; `source_parsers` was also removed from
+# Sphinx years ago, so the block only served to break the build.
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
 }
-source_suffix = ['.rst', '.md']

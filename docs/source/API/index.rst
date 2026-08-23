@@ -1,4 +1,3 @@
-.. module:: uniport
 .. automodule:: uniport
    :noindex:
 
@@ -12,13 +11,14 @@ Function
 
 .. autosummary::
     :toctree: .
-    
+
     Run
-    Get_label_Prior
+    get_prior
     label_reweight
     load_file
     filter_data
     batch_scale
+    TFIDF_LSI
 
 DataLoader
 -----------
@@ -28,8 +28,6 @@ DataLoader
 .. autosummary::
     :toctree: .
 
-    data_loader.BatchSampler
-    data_loader.BatchSampler_balance
     data_loader.SingleCellDataset
     data_loader.SingleCellDataset_vertical
     data_loader.load_data

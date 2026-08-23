@@ -95,15 +95,28 @@ def silhouette(
         scale=True
 ):
     """
-    Wrapper for sklearn silhouette function values range from [-1, 1] with
-        1 being an ideal fit
-        0 indicating overlapping clusters and
-        -1 indicating misclassified cells
-    By default, the score is scaled between 0 and 1. This is controlled `scale=True`
+    Wrapper for the sklearn silhouette score. Values range from [-1, 1], with
 
-    :param group_key: key in adata.obs of cell labels
-    :param embed: embedding key in adata.obsm, default: 'X_pca'
-    :param scale: default True, scale between 0 (worst) and 1 (best)
+        * 1 being an ideal fit,
+        * 0 indicating overlapping clusters, and
+        * -1 indicating misclassified cells.
+
+    By default the score is rescaled to [0, 1]; this is controlled by `scale`.
+
+    Parameters
+    ----------
+    X
+        Cell embeddings of shape n_obs x n_features.
+    cell_type
+        Cell labels of the n_obs cells.
+    metric
+        Distance metric passed to sklearn. Default: 'euclidean'.
+    scale
+        If True, rescale the score from [-1, 1] to [0, 1]. Default: True.
+
+    Returns
+    -------
+    Silhouette score
     """
     asw = silhouette_score(
         X,
